@@ -343,6 +343,3 @@ el proyecto:
 - **Pruebas**: escribir las pruebas con pytest y revisar la interfaz con capturas automáticas (Playwright)
   en claro, oscuro y celular, para corregir detalles visuales.
 - **Redacción** de este README y de `REDES.md`.
-
-Revisé y ejecuté todo: las pruebas pasan, levanté la aplicación con `./levantar.sh` desde un clon limpio
-y probé las 11 personas de prueba.
