@@ -1,0 +1,21 @@
+[Unit]
+Description=Portal de Roles · backend (FastAPI)
+Requires=db.service datamock.service
+After=db.service datamock.service
+
+[Container]
+ContainerName=backend
+Image=localhost/portal-roles-backend:latest
+Network=portal.network
+EnvironmentFile=%h/.config/portal-roles/.env
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"
+HealthInterval=5s
+HealthStartPeriod=5s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

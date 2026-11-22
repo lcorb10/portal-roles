@@ -1,0 +1,3 @@
+# Red compartida por los cuatro contenedores (DNS interno: db, datamock, backend).
+[Network]
+NetworkName=portal-red

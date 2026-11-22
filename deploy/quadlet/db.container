@@ -1,0 +1,21 @@
+[Unit]
+Description=Portal de Roles · PostgreSQL 17
+
+[Container]
+ContainerName=db
+Image=docker.io/library/postgres:17
+Network=portal.network
+Volume=portal-db.volume:/var/lib/postgresql/data
+EnvironmentFile=%h/.config/portal-roles/.env
+HealthCmd=pg_isready -h 127.0.0.1
+HealthInterval=5s
+HealthStartPeriod=10s
+# La unidad cuenta como iniciada solo cuando PostgreSQL responde.
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

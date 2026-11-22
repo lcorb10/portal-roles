@@ -1,0 +1,17 @@
+[Unit]
+Description=Portal de Roles · frontend (nginx) en el puerto 8080
+Requires=backend.service
+After=backend.service
+
+[Container]
+ContainerName=frontend
+Image=localhost/portal-roles-frontend:latest
+Network=portal.network
+# Único puerto publicado. Rootless no puede usar el 80: ver REDES.md.
+PublishPort=8080:8080
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

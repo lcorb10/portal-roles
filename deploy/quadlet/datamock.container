@@ -1,0 +1,22 @@
+[Unit]
+Description=Portal de Roles · servicios institucionales simulados (dataMock.js)
+
+[Container]
+ContainerName=datamock
+Image=docker.io/library/node:22-alpine
+Network=portal.network
+User=node
+WorkingDir=/home/node
+Volume=%h/.config/portal-roles/dataMock.js:/home/node/dataMock.js:ro,Z
+Environment=TOKEN_VIGENCIA_SEGUNDOS=300
+Exec=node dataMock.js
+HealthCmd=node -e "fetch('http://127.0.0.1:4000/salud').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+HealthInterval=5s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
