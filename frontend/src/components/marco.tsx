@@ -171,7 +171,14 @@ function MenuUsuario({ yo, compacto }: { yo: MiAcceso; compacto?: boolean }) {
 /** Mantiene la sesión de Jotai al día con el backend (p. ej. si un admin cambió tu perfil). */
 function SincronizarSesion() {
   const setSesion = useSetAtom(sesionAtom);
-  const { data } = useQuery({ ...yoQuery, refetchOnWindowFocus: true, staleTime: 15_000 });
+  const { pathname } = useLocation();
+  const { data, refetch } = useQuery({ ...yoQuery, refetchOnWindowFocus: true });
+  // Cada cambio de página consulta /api/auth/me: si un admin desactivó a la persona o le quitó el
+  // rol que le daba acceso, el backend responde 401 y la sesión se cierra en esa misma acción,
+  // aunque la página tenga sus datos en caché.
+  useEffect(() => {
+    void refetch();
+  }, [pathname, refetch]);
   useEffect(() => {
     if (data) setSesion(data);
   }, [data, setSesion]);
