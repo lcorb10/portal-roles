@@ -1,0 +1,7 @@
+* text=auto eol=lf
+# dataMock.js se entrega sin ningún cambio (ni siquiera de fin de línea)
+dataMock.js -text
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
