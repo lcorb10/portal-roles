@@ -149,6 +149,12 @@ Con cualquier usuario y una contraseña equivocada: *Usuario o contraseña incor
 Además: buscador rápido **Ctrl + K** (páginas, espacios, usuarios y acciones), **notificaciones**, tema claro
 y oscuro, y diseño adaptable a celular.
 
+**Por qué reservas de espacios.** Decidí usar el portal para un sistema de reserva de espacios del campus
+para darle una utilidad real. El enunciado pide decidir quién entra y con qué perfil, pero una vez adentro
+la persona no tenía mucho que hacer más que ver su acceso. Con las reservas, los mismos roles que deciden el
+acceso deciden también qué salas, laboratorios o escenarios puede reservar cada persona, y así el portal se
+parece más a una página de verdad de una universidad.
+
 **Reserva de espacios.** Es la parte "útil" del portal: los mismos roles que deciden el acceso deciden qué
 se puede reservar (EGRESADOS nunca habilita nada). Reglas, todas en el backend: de 7:00 a. m. a 9:00 p. m.,
 de 1 a 4 horas, hasta 30 días adelante, nunca en el pasado (hora de Colombia), sin cruces en el mismo
