@@ -64,6 +64,7 @@ def settings(datamock_url: str, tmp_path: Path) -> Settings:
         admin_usernames="admin.prueba",
         session_secret="x" * 40,
         database_url=f"sqlite+aiosqlite:///{tmp_path / 'pruebas.db'}",
+        proteccion_bots=False,  # se prueba aparte en test_proteccion.py
     )
 
 

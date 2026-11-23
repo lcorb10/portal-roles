@@ -16,7 +16,8 @@ from app.db import DbDep
 from app.deps import Contexto, ContextoDep, DataMockDep, SettingsDep
 from app.espacios import asegurar_espacios
 from app.models import Origen, Perfil, Usuario, ahora
-from app.schemas import LoginIn, MiAcceso, RolAcceso
+from app.proteccion import MSG_DEMASIADOS, MSG_VERIFICACION, Proteccion
+from app.schemas import LoginIn, MiAcceso, RetoOut, RolAcceso
 from app.servicios import (
     asegurar_catalogo,
     auditar,
@@ -70,9 +71,23 @@ async def login(
     # Ningún intento fallido deja una sesión creada.
     request.session.clear()
 
+    proteccion: Proteccion = request.app.state.proteccion
+    ip = request.client.host if request.client else "?"
+    clave_usuario = datos.usuario.strip().lower()
+    if settings.proteccion_bots:
+        if datos.sitio_web:
+            log.warning("Campo trampa relleno desde %s", ip)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=MSG_VERIFICACION)
+        if proteccion.bloqueado(ip, clave_usuario):
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail=MSG_DEMASIADOS)
+        if not proteccion.verificar(datos.reto or "", datos.nonce or ""):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=MSG_VERIFICACION)
+
     try:
         persona = await mock.login(datos.usuario, datos.contrasena)
     except CredencialesInvalidas:
+        if settings.proteccion_bots:
+            proteccion.registrar_fallo(ip, clave_usuario)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=MSG_CREDENCIALES) from None
     except ServicioNoDisponible:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=MSG_SSO_CAIDO) from None
@@ -115,6 +130,7 @@ async def login(
     await db.refresh(usuario)
 
     request.session.update({"uid": usuario.id, "usuario": usuario.usuario, "inst": institucionales})
+    proteccion.registrar_exito(ip, clave_usuario)
     log.info(
         "Ingreso de %s (%s) por %s",
         username,
@@ -123,6 +139,13 @@ async def login(
     )
     contexto = Contexto(usuario, perfil_efectivo(usuario, settings), institucionales, evaluacion)
     return await construir_mi_acceso(contexto, db, settings)
+
+
+@router.get("/reto")
+async def reto(request: Request) -> RetoOut:
+    """Reto de prueba de trabajo para el próximo inicio de sesión (protección contra bots)."""
+    proteccion: Proteccion = request.app.state.proteccion
+    return RetoOut(**proteccion.nuevo_reto(request.client.host if request.client else "?"))
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

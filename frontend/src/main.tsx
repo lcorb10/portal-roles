@@ -6,7 +6,11 @@ import { createRoot } from "react-dom/client";
 
 import { ApiError } from "@/lib/api";
 
+import { recargarSiFallaUnModulo } from "@/lib/version";
+
 import App from "./App";
+
+recargarSiFallaUnModulo();
 
 const clienteQuery = new QueryClient({
   defaultOptions: {

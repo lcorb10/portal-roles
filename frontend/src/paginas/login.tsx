@@ -8,6 +8,8 @@ import {
   KeyRound,
   Loader2,
   ServerCrash,
+  ShieldAlert,
+  ShieldCheck,
   ShieldX,
   UserRound,
   UsersRound,
@@ -24,10 +26,16 @@ import { Label } from "@/components/ui/label";
 import { useConfirmarSesion, useLogin } from "@/consultas";
 import { motivoSalidaAtom } from "@/estado/sesion";
 import { ApiError, mensaje } from "@/lib/api";
+import { resolverPrueba } from "@/lib/prueba-trabajo";
 import type { MiAcceso } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
 
-const PASOS = ["Validando usuario y contraseña", "Consultando tus roles institucionales", "Decidiendo tu acceso"];
+const PASOS = [
+  "Verificando que eres una persona",
+  "Validando usuario y contraseña",
+  "Consultando tus roles institucionales",
+  "Decidiendo tu acceso",
+];
 
 /** Personas de dataMock.js. Se muestran para facilitar la evaluación (VITE_PERSONAS_PRUEBA=false las oculta). */
 const PERSONAS: { usuario: string; resultado: "entra" | "no" | "error"; nota: string }[] = [
@@ -47,7 +55,8 @@ const CONTRASENA_PRUEBA = "Prueba2026*";
 const MOSTRAR_PERSONAS = import.meta.env.VITE_PERSONAS_PRUEBA !== "false";
 
 type Resultado =
-  { tipo: "concedido"; yo: MiAcceso } | { tipo: "credenciales" | "denegado" | "servicio" | "red"; mensaje: string };
+  | { tipo: "concedido"; yo: MiAcceso }
+  | { tipo: "credenciales" | "denegado" | "servicio" | "red" | "bloqueado"; mensaje: string };
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -55,6 +64,7 @@ function clasificar(error: unknown): Resultado {
   if (error instanceof ApiError) {
     if (error.estado === 401) return { tipo: "credenciales", mensaje: error.message };
     if (error.estado === 403) return { tipo: "denegado", mensaje: error.message };
+    if (error.estado === 429 || error.estado === 400) return { tipo: "bloqueado", mensaje: error.message };
     if (error.estado === 0) return { tipo: "red", mensaje: error.message };
     if (error.estado >= 500) return { tipo: "servicio", mensaje: error.message };
   }
@@ -183,6 +193,7 @@ function AvisoRechazo({ resultado }: { resultado: Exclude<Resultado, { tipo: "co
     denegado: { Icono: ShieldX, titulo: "Acceso denegado", tono: "destructive" },
     servicio: { Icono: ServerCrash, titulo: "Servicio no disponible", tono: "warning" },
     red: { Icono: ServerCrash, titulo: "Sin conexión", tono: "warning" },
+    bloqueado: { Icono: ShieldAlert, titulo: "Verificación de seguridad", tono: "warning" },
   }[resultado.tipo];
   const { Icono } = config;
   return (
@@ -264,6 +275,7 @@ export default function Login() {
   const usuarioRef = useRef<HTMLInputElement>(null);
 
   const login = useLogin();
+  const trampaRef = useRef<HTMLInputElement>(null);
   const confirmar = useConfirmarSesion();
   const navegar = useNavigate();
   const desde = (useLocation().state as { desde?: string } | null)?.desde;
@@ -275,7 +287,8 @@ export default function Login() {
 
   useEffect(() => {
     if (!verificando) return;
-    const id = setInterval(() => setPaso((p) => Math.min(p + 1, PASOS.length - 1)), 420);
+    // El paso 0 (verificación anti-bots) avanza cuando termina la prueba de trabajo.
+    const id = setInterval(() => setPaso((p) => (p === 0 ? 0 : Math.min(p + 1, PASOS.length - 1))), 420);
     return () => clearInterval(id);
   }, [verificando]);
 
@@ -288,7 +301,15 @@ export default function Login() {
     setVerificando(true);
     const inicio = Date.now();
     try {
-      const yo = await login.mutateAsync({ usuario: usuario.trim(), contrasena });
+      const prueba = await resolverPrueba();
+      setPaso(1);
+      const yo = await login.mutateAsync({
+        usuario: usuario.trim(),
+        contrasena,
+        reto: prueba.reto,
+        nonce: prueba.nonce,
+        sitio_web: trampaRef.current?.value || undefined,
+      });
       await esperar(Math.max(0, 1100 - (Date.now() - inicio)));
       setPaso(PASOS.length);
       await esperar(250);
@@ -356,6 +377,18 @@ export default function Login() {
                 </AnimatePresence>
 
                 <form ref={alcance} onSubmit={enviar} className="mt-8 space-y-5" noValidate>
+                  {/* Campo trampa: invisible para las personas; los bots que rellenan todo lo completan. */}
+                  <div aria-hidden="true" className="absolute -left-[9999px] size-px overflow-hidden">
+                    <label htmlFor="sitio_web">No llenes este campo</label>
+                    <input
+                      ref={trampaRef}
+                      id="sitio_web"
+                      name="sitio_web"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="usuario">Usuario</Label>
                     <div className="relative">
@@ -428,6 +461,11 @@ export default function Login() {
                     )}
                   </Button>
                 </form>
+
+                <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  <ShieldCheck className="size-3.5 text-success" />
+                  Protegido contra bots con una verificación invisible
+                </p>
 
                 {MOSTRAR_PERSONAS && (
                   <details className="group mt-10 rounded-xl border">

@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     sesion_horas: int = 8
     # Activar detrás de HTTPS para que la cookie lleve el atributo Secure.
     sesion_solo_https: bool = False
+    # Protección contra bots en el login: prueba de trabajo + límite de intentos (ver app/proteccion.py).
+    proteccion_bots: bool = True
 
     @cached_property
     def administradores(self) -> frozenset[str]:

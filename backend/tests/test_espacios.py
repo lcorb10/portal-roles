@@ -119,7 +119,9 @@ async def test_cancelar_propia_y_ajena(app, ana) -> None:
     sala = (await espacios_de(ana))["sala-estudio"]["id"]
     reserva = (await reservar(ana, sala)).json()
     carlos = await entrar(app, "carlos.profesor")
-    assert (await carlos.post(f"/api/reservas/{reserva['id']}/cancelar", json={})).status_code == 404  # no es suya
+    assert (
+        await carlos.post(f"/api/reservas/{reserva['id']}/cancelar", json={})
+    ).status_code == 404  # no es suya
     await carlos.aclose()
     assert (await ana.post(f"/api/reservas/{reserva['id']}/cancelar", json={})).status_code == 204
     mias = (await ana.get("/api/reservas/mias")).json()
@@ -136,7 +138,9 @@ async def test_admin_ve_todas_cancela_y_edita_roles(admin, ana) -> None:
     url = f"/api/reservas/{reserva['id']}/cancelar"
     r = await admin.post(url, json={})  # sin motivo: no se puede
     assert r.status_code == 422 and "motivo" in r.json()["detail"]
-    assert (await admin.post(url, json={"motivo": "Evento institucional en la biblioteca"})).status_code == 204
+    assert (
+        await admin.post(url, json={"motivo": "Evento institucional en la biblioteca"})
+    ).status_code == 204
 
     # Ana recibe el aviso con el motivo
     avisos = (await ana.get("/api/avisos")).json()

@@ -4,6 +4,7 @@ import { MotionConfig } from "motion/react";
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 
+import { ErrorRuta } from "@/components/error-ruta";
 import { RequiereAdmin, RequiereSesion, SoloSinSesion } from "@/components/guardias";
 import { CargandoFilas } from "@/components/estados";
 import { Marco } from "@/components/marco";
@@ -14,6 +15,7 @@ import { motivoSalidaAtom, sesionAtom } from "@/estado/sesion";
 import { escucharSistema, temaAtom } from "@/estado/tema";
 import { alPerderSesion, api } from "@/lib/api";
 import type { MiAcceso } from "@/lib/tipos";
+import { revisarVersion } from "@/lib/version";
 import Login from "@/paginas/login";
 import MiAccesoPagina from "@/paginas/mi-acceso";
 import NoEncontrada from "@/paginas/no-encontrada";
@@ -37,10 +39,12 @@ const Diferida = ({ children }: { children: ReactNode }) => (
 const router = createBrowserRouter([
   {
     element: <SoloSinSesion />,
+    errorElement: <ErrorRuta />,
     children: [{ path: "/login", element: <Login /> }],
   },
   {
     element: <RequiereSesion />,
+    errorElement: <ErrorRuta />,
     children: [
       {
         element: <Marco />,
@@ -168,6 +172,17 @@ export default function App() {
   );
 
   useEffect(() => escucharSistema(() => store.get(temaAtom)), [store]);
+
+  // ¿Hay una versión nueva publicada? (al abrir, cada minuto y al volver a la pestaña)
+  useEffect(() => {
+    void revisarVersion();
+    const id = setInterval(revisarVersion, 60_000);
+    window.addEventListener("focus", revisarVersion);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", revisarVersion);
+    };
+  }, []);
 
   return (
     <MotionConfig reducedMotion="user">

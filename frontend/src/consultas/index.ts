@@ -88,7 +88,7 @@ export const preguntasQuery = (perfil: string) =>
  *  la pantalla de inicio alcance a mostrar el veredicto antes de cambiar de página. */
 export function useLogin() {
   return useMutation({
-    mutationFn: (datos: { usuario: string; contrasena: string }) =>
+    mutationFn: (datos: { usuario: string; contrasena: string; reto?: string; nonce?: string; sitio_web?: string }) =>
       api<MiAcceso>("/auth/login", { metodo: "POST", cuerpo: datos, silenciar401: true }),
   });
 }

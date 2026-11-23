@@ -13,6 +13,7 @@ from app.datamock import DataMockClient, ServicioNoDisponible
 from app.db import crear_engine, crear_sessionmaker
 from app.espacios import asegurar_espacios
 from app.models import Base
+from app.proteccion import Proteccion
 from app.routers import admin_roles, admin_usuarios, asistente, auth, espacios
 from app.servicios import asegurar_catalogo
 
@@ -45,6 +46,7 @@ def create_app(settings: Settings | None = None, datamock: DataMockClient | None
         app.state.engine = engine
         app.state.sessionmaker = crear_sessionmaker(engine)
         app.state.datamock = datamock or DataMockClient(settings)
+        app.state.proteccion = Proteccion(settings.session_secret)
         tarea = asyncio.create_task(cargar_catalogo_con_reintentos(app))
         try:
             yield

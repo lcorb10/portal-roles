@@ -24,7 +24,16 @@ export function alPerderSesion(oyente: Oyente): () => void {
   return () => oyentesSesion.delete(oyente);
 }
 
+const MENSAJE_VERSION_VIEJA =
+  "Esta acción cambió en una actualización del portal. Recarga la página para usar la versión nueva.";
+
 function mensajeDeError(estado: number, cuerpo: unknown): string {
+  // FastAPI responde así cuando la ruta no existe: la pestaña tiene una versión vieja de la app.
+  const detalle =
+    cuerpo && typeof cuerpo === "object" && "detail" in cuerpo ? (cuerpo as { detail: unknown }).detail : null;
+  if ((estado === 404 && detalle === "Not Found") || (estado === 405 && detalle === "Method Not Allowed")) {
+    return MENSAJE_VERSION_VIEJA;
+  }
   if (cuerpo && typeof cuerpo === "object" && "detail" in cuerpo) {
     const detalle = (cuerpo as { detail: unknown }).detail;
     if (typeof detalle === "string") return detalle;

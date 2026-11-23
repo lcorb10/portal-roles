@@ -1,11 +1,21 @@
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+// Versión de esta compilación: la app la compara con /version.json para avisar si hay una nueva.
+const VERSION = new Date().toISOString();
+const publicarVersion = (): Plugin => ({
+  name: "publicar-version",
+  generateBundle() {
+    this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify({ version: VERSION }) });
+  },
+});
 
 // En desarrollo, /api se reenvía al backend local (igual que nginx en los contenedores).
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), publicarVersion()],
+  define: { __VERSION__: JSON.stringify(VERSION) },
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
   server: {
     proxy: { "/api": "http://localhost:8000" },

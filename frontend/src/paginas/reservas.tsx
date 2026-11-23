@@ -124,7 +124,7 @@ export function useConfirmarCancelacion({ requiereMotivo = false }: { requiereMo
             {reserva.espacio}, {rangoHoras(reserva.hora_inicio, reserva.hora_fin)}
             {requiereMotivo
               ? ` · reserva de ${reserva.nombre_usuario}. Le avisaremos con el motivo que escribas.`
-              : ". El horario queda libre para otras personas."}
+              : " · El horario queda libre para otras personas."}
           </p>
         )
       }

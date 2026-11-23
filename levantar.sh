@@ -87,7 +87,7 @@ ok "db y datamock listos"
 info "Arrancando backend (FastAPI)"
 podman run -d --name backend --network "$RED" --restart unless-stopped \
   -e MOCK_API_URL -e ROLES_CLIENT_ID -e ROLES_CLIENT_SECRET -e IA_API_KEY \
-  -e ADMIN_USERNAMES -e SESSION_SECRET -e SESION_SOLO_HTTPS -e DATABASE_URL \
+  -e ADMIN_USERNAMES -e SESSION_SECRET -e SESION_SOLO_HTTPS -e PROTECCION_BOTS -e DATABASE_URL \
   portal-roles-backend >/dev/null
 esperar "backend" 60 podman exec backend python -c \
   "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"

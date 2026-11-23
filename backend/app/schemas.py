@@ -20,6 +20,17 @@ class Entrada(BaseModel):
 class LoginIn(Entrada):
     usuario: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
     contrasena: Annotated[str, Field(min_length=1, max_length=200)]
+    # Prueba de trabajo resuelta por el navegador (GET /api/auth/reto).
+    reto: Annotated[str, Field(max_length=200)] | None = None
+    nonce: Annotated[str, Field(max_length=32)] | None = None
+    # Campo trampa: invisible para las personas; si llega con texto, es un bot.
+    sitio_web: Annotated[str, Field(max_length=200)] | None = None
+
+
+class RetoOut(BaseModel):
+    reto: str
+    dificultad: int
+    vence: int
 
 
 class RolAcceso(BaseModel):
