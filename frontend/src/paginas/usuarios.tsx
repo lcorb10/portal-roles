@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 
 import { Confirmar } from "@/components/confirmar";
@@ -376,7 +377,8 @@ export default function Usuarios() {
   const { data: usuarios, isPending, error, refetch } = useQuery(usuariosQuery);
   const editar = useEditarUsuario();
   const eliminar = useEliminarUsuario();
-  const [busqueda, setBusqueda] = useState("");
+  const [params] = useSearchParams();
+  const [busqueda, setBusqueda] = useState(params.get("buscar") ?? "");
   const [filtroPerfil, setFiltroPerfil] = useState<FiltroPerfil>("todos");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("todos");
   const [dialogo, setDialogo] = useState<{ usuario: Usuario | null; clave: number } | null>(null);
@@ -556,7 +558,7 @@ export default function Usuarios() {
             <Vacio icono={Search} titulo="Nadie coincide con los filtros" />
           ) : (
             <>
-              <div className="hidden overflow-x-auto rounded-2xl border bg-card lg:block">
+              <div className="tarjeta hidden overflow-x-auto lg:block">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                     <tr>

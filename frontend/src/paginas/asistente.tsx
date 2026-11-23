@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { atom, useAtom, useAtomValue } from "jotai";
-import { ArrowUp, Bot, Eraser, Info, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowUp, Eraser, Info, Landmark, ShieldCheck, Sparkles, TriangleAlert, Wand2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -8,6 +8,7 @@ import { Encabezado } from "@/components/encabezado";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { preguntasQuery, usePreguntar } from "@/consultas";
 import { sesionAtom } from "@/estado/sesion";
@@ -21,14 +22,24 @@ interface Mensaje {
   autor: "persona" | "asistente" | "sistema";
   texto: string;
   tono?: "aviso" | "error";
+  /** Pregunta oficial a la que el intérprete tradujo el mensaje. */
+  interpretada?: string | null;
+  /** Mensaje fijo del portal (saludo, ayuda…), no de la IA. */
+  delPortal?: boolean;
 }
 
 /** La conversación sobrevive al cambiar de página, pero es de cada persona. */
 const conversacionAtom = atom<{ usuarioId: number | null; mensajes: Mensaje[] }>({ usuarioId: null, mensajes: [] });
 let siguienteId = 1;
+/** Modo estricto: coincidencia exacta, como pide el enunciado. Apagado, actúa el intérprete. */
+const estrictoAtom = atom(false);
 
-const SIN_RESPUESTA =
-  "El asistente no tiene una respuesta para esa pregunta. Solo entiende las preguntas exactas: prueba con una de las sugeridas.";
+const SIN_RESPUESTA = {
+  estricto:
+    "El asistente no tiene una respuesta para esa pregunta. En modo estricto solo entiende las preguntas exactas: prueba con una de las sugeridas.",
+  libre:
+    "No entendí esa pregunta y el asistente no responde lo que no sabe. Prueba con tus palabras sobre tus roles, tu perfil o el acceso, o escribe «ayuda».",
+};
 
 function Escribiendo() {
   return (
@@ -55,11 +66,13 @@ function Escribiendo() {
   );
 }
 
-function AvatarAsistente() {
+function AvatarAsistente({ grande }: { grande?: boolean }) {
   return (
-    <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-      <Bot className="size-4" />
-    </div>
+    <img
+      src="/img/marca/asistente.webp"
+      alt=""
+      className={cn("shrink-0 rounded-full bg-[#f4efe9] ring-1 ring-black/5", grande ? "size-16" : "size-8")}
+    />
   );
 }
 
@@ -104,14 +117,30 @@ function Burbuja({ m, nombre }: { m: Mensaje; nombre: string }) {
       ) : (
         <AvatarAsistente />
       )}
-      <p
-        className={cn(
-          "max-w-[min(80%,34rem)] rounded-2xl px-4 py-2.5 text-sm leading-relaxed text-pretty",
-          propio ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-muted",
+      <div className={cn("flex max-w-[min(80%,34rem)] flex-col gap-1", propio ? "items-end" : "items-start")}>
+        {!propio && (m.interpretada || m.delPortal) && (
+          <span className="inline-flex items-center gap-1 px-1 text-[0.7rem] text-muted-foreground">
+            {m.delPortal ? (
+              <>
+                <Landmark className="size-3" /> Mensaje del portal
+              </>
+            ) : (
+              <>
+                <Wand2 className="size-3" /> Entendí: «{m.interpretada}»
+              </>
+            )}
+          </span>
         )}
-      >
-        {m.texto}
-      </p>
+        <p
+          className={cn(
+            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed text-pretty",
+            propio ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-muted",
+            m.delPortal && "border border-dashed bg-transparent",
+          )}
+        >
+          {m.texto}
+        </p>
+      </div>
     </motion.div>
   );
 }
@@ -171,6 +200,7 @@ export default function Asistente() {
   const yo = useAtomValue(sesionAtom)!;
   const [conversacion, setConversacion] = useAtom(conversacionAtom);
   const [texto, setTexto] = useState("");
+  const [estricto, setEstricto] = useAtom(estrictoAtom);
   const preguntar = usePreguntar();
   const preguntas = useQuery(preguntasQuery(yo.perfil));
   const finRef = useRef<HTMLDivElement>(null);
@@ -191,14 +221,22 @@ export default function Asistente() {
     if (!pregunta.trim() || preguntar.isPending) return;
     agregar({ autor: "persona", texto: pregunta });
     setTexto("");
-    preguntar.mutate(pregunta, {
-      onSuccess: (r) =>
-        r.respuesta
-          ? agregar({ autor: "asistente", texto: r.respuesta })
-          : agregar({ autor: "sistema", texto: SIN_RESPUESTA, tono: "aviso" }),
-      onError: (e) => agregar({ autor: "sistema", texto: mensajeError(e), tono: "error" }),
-      onSettled: () => entradaRef.current?.focus(),
-    });
+    preguntar.mutate(
+      { pregunta, estricto },
+      {
+        onSuccess: (r) =>
+          r.respuesta
+            ? agregar({
+                autor: "asistente",
+                texto: r.respuesta,
+                interpretada: r.interpretada_como,
+                delPortal: r.origen === "portal",
+              })
+            : agregar({ autor: "sistema", texto: SIN_RESPUESTA[estricto ? "estricto" : "libre"], tono: "aviso" }),
+        onError: (e) => agregar({ autor: "sistema", texto: mensajeError(e), tono: "error" }),
+        onSettled: () => entradaRef.current?.focus(),
+      },
+    );
   }
 
   function alEnviar(e: FormEvent) {
@@ -213,30 +251,45 @@ export default function Asistente() {
       <Encabezado
         antetitulo="Asistente"
         titulo="Pregúntale al portal"
-        descripcion="Responde sobre tu acceso con tus datos reales. Solo entiende preguntas exactas."
+        descripcion={
+          estricto
+            ? "Modo estricto: responde solo si escribes la pregunta exactamente igual."
+            : "Escríbele con tus palabras: entiende tu intención y la respuesta siempre viene del servicio de IA."
+        }
         acciones={
-          !vacio && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConversacion({ usuarioId: yo.id, mensajes: [] })}
-              disabled={preguntar.isPending}
-            >
-              <Eraser /> Nueva conversación
-            </Button>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex h-8 cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 text-sm">
+              <Switch checked={estricto} onCheckedChange={setEstricto} aria-label="Modo estricto" />
+              Modo estricto
+            </label>
+            {!vacio && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConversacion({ usuarioId: yo.id, mensajes: [] })}
+                disabled={preguntar.isPending}
+              >
+                <Eraser /> Nueva conversación
+              </Button>
+            )}
+          </div>
         }
       />
 
-      <section className="flex min-h-[560px] flex-col overflow-hidden rounded-2xl border bg-card lg:h-[calc(100dvh-15rem)]">
+      <section className="tarjeta flex min-h-[560px] flex-col overflow-hidden lg:h-[calc(100dvh-16rem)]">
         <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
           {vacio ? (
             <div className="mx-auto flex max-w-2xl flex-col items-center py-6 text-center">
-              <div className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
-                <Sparkles className="size-5" />
-              </div>
-              <h2 className="mt-4 text-lg font-semibold tracking-tight">¿En qué te ayudo?</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Elige una pregunta o escríbela tal cual.</p>
+              <AvatarAsistente grande />
+              <h2 className="mt-4 text-lg font-semibold tracking-tight">
+                Hola, {yo.nombre.split(" ")[0]}. ¿En qué te ayudo?
+              </h2>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Sparkles className="size-3.5 text-brand" />
+                {estricto
+                  ? "Elige una pregunta o escríbela tal cual."
+                  : "Elige una pregunta o escríbela como te salga."}
+              </p>
               <div className="mt-7 w-full">
                 {preguntas.isPending ? (
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -286,7 +339,9 @@ export default function Asistente() {
               onChange={(e) => setTexto(e.target.value)}
               maxLength={500}
               autoComplete="off"
-              placeholder="Escribe tu pregunta…"
+              placeholder={
+                estricto ? "Escribe la pregunta exacta…" : "Escribe lo que quieras saber, p. ej.: ¿soy admin?"
+              }
               className="h-12 w-full rounded-xl border bg-background pr-14 pl-4 text-sm transition-[border-color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             />
             <Button

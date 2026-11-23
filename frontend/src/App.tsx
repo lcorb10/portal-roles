@@ -23,6 +23,12 @@ const Asistente = lazy(() => import("@/paginas/asistente"));
 const Resumen = lazy(() => import("@/paginas/resumen"));
 const Roles = lazy(() => import("@/paginas/roles"));
 const Usuarios = lazy(() => import("@/paginas/usuarios"));
+const Inicio = lazy(() => import("@/paginas/inicio"));
+const Espacios = lazy(() => import("@/paginas/espacios"));
+const MisReservas = lazy(() => import("@/paginas/reservas"));
+const AdminReservas = lazy(() => import("@/paginas/admin-reservas"));
+const Verificador = lazy(() => import("@/paginas/verificador"));
+const Ayuda = lazy(() => import("@/paginas/ayuda"));
 
 const Diferida = ({ children }: { children: ReactNode }) => (
   <Suspense fallback={<CargandoFilas className="mt-24" />}>{children}</Suspense>
@@ -39,7 +45,39 @@ const router = createBrowserRouter([
       {
         element: <Marco />,
         children: [
-          { index: true, element: <Navigate to="/mi-acceso" replace /> },
+          { index: true, element: <Navigate to="/inicio" replace /> },
+          {
+            path: "inicio",
+            element: (
+              <Diferida>
+                <Inicio />
+              </Diferida>
+            ),
+          },
+          {
+            path: "espacios",
+            element: (
+              <Diferida>
+                <Espacios />
+              </Diferida>
+            ),
+          },
+          {
+            path: "reservas",
+            element: (
+              <Diferida>
+                <MisReservas />
+              </Diferida>
+            ),
+          },
+          {
+            path: "ayuda",
+            element: (
+              <Diferida>
+                <Ayuda />
+              </Diferida>
+            ),
+          },
           { path: "mi-acceso", element: <MiAccesoPagina /> },
           {
             path: "asistente",
@@ -74,6 +112,22 @@ const router = createBrowserRouter([
                 element: (
                   <Diferida>
                     <Usuarios />
+                  </Diferida>
+                ),
+              },
+              {
+                path: "reservas",
+                element: (
+                  <Diferida>
+                    <AdminReservas />
+                  </Diferida>
+                ),
+              },
+              {
+                path: "verificador",
+                element: (
+                  <Diferida>
+                    <Verificador />
                   </Diferida>
                 ),
               },

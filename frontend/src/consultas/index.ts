@@ -4,14 +4,19 @@ import { useSetAtom } from "jotai";
 import { sesionAtom } from "@/estado/sesion";
 import { api } from "@/lib/api";
 import type {
+  Disponibilidad,
+  Espacio,
   EventoAuditoria,
   MiAcceso,
   PersonaDirectorio,
   Pregunta,
+  ReglasReserva,
+  Reserva,
   RespuestaAsistente,
   Resumen,
   Rol,
   Usuario,
+  Verificacion,
 } from "@/lib/tipos";
 
 export const claves = {
@@ -22,6 +27,12 @@ export const claves = {
   auditoria: ["admin", "auditoria"] as const,
   personas: (texto: string) => ["admin", "personas", texto] as const,
   preguntas: (perfil: string) => ["asistente", "preguntas", perfil] as const,
+  espacios: ["espacios"] as const,
+  reglas: ["espacios", "reglas"] as const,
+  disponibilidad: (id: number, fecha: string) => ["espacios", id, "disponibilidad", fecha] as const,
+  misReservas: ["reservas", "mias"] as const,
+  reservasAdmin: ["admin", "reservas"] as const,
+  verificar: (usuario: string) => ["admin", "verificar", usuario] as const,
 };
 
 // ── Consultas ───────────────────────────────────────────────────────────────────────────
@@ -208,6 +219,95 @@ export function useEliminarUsuario() {
 
 export function usePreguntar() {
   return useMutation({
-    mutationFn: (pregunta: string) => api<RespuestaAsistente>("/asistente", { metodo: "POST", cuerpo: { pregunta } }),
+    mutationFn: ({ pregunta, estricto }: { pregunta: string; estricto: boolean }) =>
+      api<RespuestaAsistente>("/asistente", { metodo: "POST", cuerpo: { pregunta, estricto } }),
+  });
+}
+
+// ── Espacios y reservas ─────────────────────────────────────────────────────────────────
+
+export const espaciosQuery = queryOptions({
+  queryKey: claves.espacios,
+  queryFn: () => api<Espacio[]>("/espacios"),
+});
+
+export const reglasQuery = queryOptions({
+  queryKey: claves.reglas,
+  queryFn: () => api<ReglasReserva>("/espacios/reglas"),
+  staleTime: 5 * 60_000,
+});
+
+export const disponibilidadQuery = (id: number, fecha: string) =>
+  queryOptions({
+    queryKey: claves.disponibilidad(id, fecha),
+    queryFn: () => api<Disponibilidad>(`/espacios/${id}/disponibilidad?fecha=${fecha}`),
+    placeholderData: keepPreviousData,
+  });
+
+export const misReservasQuery = queryOptions({
+  queryKey: claves.misReservas,
+  queryFn: () => api<Reserva[]>("/reservas/mias"),
+});
+
+export const reservasAdminQuery = queryOptions({
+  queryKey: claves.reservasAdmin,
+  queryFn: () => api<Reserva[]>("/admin/reservas"),
+});
+
+export const verificarQuery = (usuario: string) =>
+  queryOptions({
+    queryKey: claves.verificar(usuario),
+    queryFn: () => api<Verificacion>(`/admin/verificar/${encodeURIComponent(usuario)}`),
+    enabled: usuario.trim().length >= 2,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+function useRefrescarReservas() {
+  const cliente = useQueryClient();
+  return () =>
+    Promise.all([
+      cliente.invalidateQueries({ queryKey: ["espacios"] }),
+      cliente.invalidateQueries({ queryKey: ["reservas"] }),
+      cliente.invalidateQueries({ queryKey: ["admin"] }),
+    ]);
+}
+
+export interface ReservaNueva {
+  espacio_id: number;
+  fecha: string;
+  hora_inicio: number;
+  hora_fin: number;
+  motivo: string;
+  asistentes: number;
+}
+
+export function useReservar() {
+  const refrescar = useRefrescarReservas();
+  return useMutation({
+    mutationFn: (datos: ReservaNueva) => api<Reserva>("/reservas", { metodo: "POST", cuerpo: datos }),
+    onSuccess: refrescar,
+  });
+}
+
+export function useCancelarReserva() {
+  const refrescar = useRefrescarReservas();
+  return useMutation({
+    mutationFn: (id: number) => api<void>(`/reservas/${id}`, { metodo: "DELETE" }),
+    onSuccess: refrescar,
+  });
+}
+
+export function useEditarEspacio() {
+  const refrescar = useRefrescarReservas();
+  return useMutation({
+    mutationFn: ({
+      id,
+      cambios,
+    }: {
+      id: number;
+      cambios: { activo?: boolean; capacidad?: number; rol_ids?: number[] };
+    }) => api<Espacio>(`/admin/espacios/${id}`, { metodo: "PUT", cuerpo: cambios }),
+    onSuccess: refrescar,
   });
 }

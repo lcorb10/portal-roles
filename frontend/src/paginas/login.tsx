@@ -63,73 +63,53 @@ function clasificar(error: unknown): Resultado {
 
 // ── Panel ilustrado (izquierda) ─────────────────────────────────────────────────────────
 
-const CAPAS = [
-  { rol: "FUNCIONARIOS", tono: "bg-[#cb333b]", texto: "text-white", acceso: true },
-  { rol: "PROFESORES", tono: "bg-[#f4efe9]", texto: "text-[#211d1b]", acceso: true },
-  { rol: "ESTUDIANTES", tono: "bg-[#e8b923]", texto: "text-[#211d1b]", acceso: true },
-  {
-    rol: "EGRESADOS",
-    tono: "bg-white/5 border border-dashed border-white/25",
-    texto: "text-white/45 line-through",
-    acceso: false,
-  },
-];
-
-function Ilustracion() {
-  return (
-    <div className="relative mx-auto h-72 w-full max-w-sm [perspective:900px]" aria-hidden="true">
-      {CAPAS.map((capa, i) => (
-        <motion.div
-          key={capa.rol}
-          initial={{ opacity: 0, y: 30, rotateX: 58, rotateZ: -38 }}
-          animate={{ opacity: 1, y: 0, rotateX: 58, rotateZ: -38 }}
-          transition={{ delay: 0.15 + i * 0.12, type: "spring", stiffness: 120, damping: 18 }}
-          className="absolute inset-x-6 h-36 [transform-style:preserve-3d]"
-          style={{ top: `${i * 52}px`, zIndex: CAPAS.length - i }}
-        >
-          <motion.div
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 5 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.4 }}
-            className={cn(
-              "flex h-full w-full items-end justify-between rounded-2xl p-4 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]",
-              capa.tono,
-            )}
-          >
-            <span className={cn("font-mono text-xs font-semibold tracking-wider", capa.texto)}>{capa.rol}</span>
-          </motion.div>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
-
 function PanelMarca() {
   return (
-    <section className="relative hidden overflow-hidden bg-[#1a1716] text-[#f4efe9] lg:flex lg:flex-col">
-      {/* Retícula y halo de color */}
-      <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)] [background-size:44px_44px] opacity-[0.07]" />
-      <div className="pointer-events-none absolute -top-40 -right-40 size-[520px] rounded-full bg-[#cb333b]/25 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-48 -left-24 size-[420px] rounded-full bg-[#e8b923]/12 blur-[110px]" />
+    <section className="relative isolate hidden overflow-hidden bg-[#141110] text-[#f4efe9] lg:flex lg:flex-col">
+      {/* Ilustración del campus (Gemini) a sangre completa */}
+      <motion.img
+        src="/img/marca/campus.webp"
+        alt=""
+        initial={{ opacity: 0, scale: 1.04 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute inset-0 -z-10 size-full object-cover object-[50%_20%]"
+      />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#141110] via-[#141110]/55 to-[#141110]/10" />
 
-      <div className="relative flex items-center gap-2.5 px-12 pt-10">
-        <Marca />
-        <span className="font-semibold tracking-tight">Portal de Roles</span>
+      <div className="flex items-center gap-2.5 px-12 pt-10">
+        <Marca className="size-10 text-[#4a413d]" />
+        <div className="leading-none">
+          <p className="text-[1.05rem] font-bold tracking-[-0.02em]">Portal de Roles</p>
+          <p className="mt-1 text-[0.68rem] font-medium tracking-[0.08em] text-[#f4efe9]/60 uppercase">
+            Campus · Acceso
+          </p>
+        </div>
       </div>
 
-      <div className="relative flex flex-1 flex-col justify-center px-12">
-        <Ilustracion />
-        <h2 className="mt-14 max-w-md text-[2.1rem] leading-[1.1] font-semibold tracking-tight text-balance">
-          Tu acceso, decidido por tus roles.
-        </h2>
-        <p className="mt-4 max-w-md text-[0.95rem] leading-relaxed text-[#f4efe9]/65">
-          Sumamos los roles del sistema institucional y los que te asigna un administrador. Con uno que dé acceso,
-          entras. <span className="text-[#e8b923]">EGRESADOS</span> por sí solo no da acceso.
-        </p>
+      <div className="mt-auto px-12 pb-12">
+        <motion.h2
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-lg text-[2.6rem] leading-[1.05] font-bold tracking-[-0.035em] text-balance"
+        >
+          Tus roles abren <span className="text-[#ffcd00]">las puertas</span> del campus.
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.38, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-4 max-w-md text-[0.95rem] leading-relaxed text-[#f4efe9]/70"
+        >
+          Consulta tu acceso, reserva salas, laboratorios y auditorios, y pregúntale al asistente. Con un rol que dé
+          acceso, entras; EGRESADOS por sí solo no da acceso.
+        </motion.p>
+        <div className="mt-8 flex items-center gap-4 text-xs text-[#f4efe9]/45">
+          <span className="franja h-1 w-16 rounded-full" />
+          Servicios institucionales simulados · Prueba técnica
+        </div>
       </div>
-
-      <p className="relative px-12 pb-8 text-xs text-[#f4efe9]/40">
-        Servicios institucionales simulados · Prueba técnica
-      </p>
     </section>
   );
 }
@@ -316,7 +296,7 @@ export default function Login() {
       setResultado({ tipo: "concedido", yo });
       await esperar(1200);
       confirmar(yo);
-      navegar(desde && desde !== "/login" ? desde : "/mi-acceso", { replace: true });
+      navegar(desde && desde !== "/login" ? desde : "/inicio", { replace: true });
     } catch (error) {
       await esperar(Math.max(0, 800 - (Date.now() - inicio)));
       setVerificando(false);

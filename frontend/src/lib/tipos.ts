@@ -72,6 +72,8 @@ export interface Pregunta {
 export interface RespuestaAsistente {
   pregunta: string;
   respuesta: string | null;
+  origen: "ia" | "portal" | null;
+  interpretada_como: string | null;
 }
 
 export interface EventoAuditoria {
@@ -88,4 +90,71 @@ export interface Resumen {
   usuarios_activos: number;
   roles_activos: number;
   roles_total: number;
+}
+
+export interface Espacio {
+  id: number;
+  codigo: string;
+  nombre: string;
+  tipo: string;
+  ubicacion: string;
+  capacidad: number;
+  descripcion: string;
+  activo: boolean;
+  roles_permitidos: string[];
+  rol_ids: number[];
+  puede_reservar: boolean;
+  motivo: string | null;
+  habilitado_por: string[];
+}
+
+export interface Reserva {
+  id: number;
+  espacio_id: number;
+  espacio: string;
+  espacio_codigo: string;
+  ubicacion: string;
+  usuario: string;
+  nombre_usuario: string;
+  fecha: string; // AAAA-MM-DD
+  hora_inicio: number;
+  hora_fin: number;
+  motivo: string;
+  asistentes: number;
+  estado: "ACTIVA" | "CANCELADA";
+  creada_en: string;
+  cancelada_por: string | null;
+}
+
+export interface FranjaOcupada {
+  hora_inicio: number;
+  hora_fin: number;
+  propia: boolean;
+  por: string | null;
+}
+
+export interface Disponibilidad {
+  fecha: string;
+  ocupadas: FranjaOcupada[];
+}
+
+export interface ReglasReserva {
+  hora_apertura: number;
+  hora_cierre: number;
+  max_horas: number;
+  dias_adelante: number;
+  max_reservas: number;
+  hoy: string;
+}
+
+export interface Verificacion {
+  usuario: string;
+  entraria: boolean;
+  mensaje: string;
+  perfil: Perfil | null;
+  registrado: boolean;
+  activo: boolean | null;
+  en_sistema_de_roles: boolean | null;
+  roles_institucionales: RolAcceso[];
+  roles_asignados: RolAcceso[];
 }

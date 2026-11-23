@@ -1,32 +1,36 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Paleta inspirada en los colores institucionales de Uninorte (manual de identidad):
- *   Rojo  Pantone 1797C ≈ #CB333B → acento de marca (indicadores, foco, detalles)
- *   Negro Process Black            → neutros grafito cálidos y acciones principales
- *   Amarillo Roble Pantone 116C ≈ #FFCD00 → detalles dorados
- * El rojo se usa con moderación para que no se confunda con los mensajes de error.
+ * Identidad visual basada en los colores institucionales de Uninorte (manual de identidad):
+ *   Rojo  Pantone 1797C ≈ #CB333B → marca: barra superior, indicadores, acentos
+ *   Negro Process Black            → carbón cálido: barra superior, texto, acciones principales
+ *   Amarillo Roble Pantone 116C ≈ #FFCD00 → detalles (perfil admin, destacados)
+ * Tipografía: Inter, la misma de uninorte.edu.co.
  */
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-strong: var(--brand-strong);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-header: var(--header);
+  --color-header-foreground: var(--header-foreground);
+  --color-header-muted: var(--header-muted);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -67,59 +71,45 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  --animate-shake: shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
-}
-
-@keyframes shake {
-  10%,
-  90% {
-    transform: translateX(-1px);
-  }
-  20%,
-  80% {
-    transform: translateX(2px);
-  }
-  30%,
-  50%,
-  70% {
-    transform: translateX(-4px);
-  }
-  40%,
-  60% {
-    transform: translateX(4px);
-  }
+  --shadow-tarjeta: 0 1px 2px rgb(31 28 26 / 0.04), 0 4px 16px -6px rgb(31 28 26 / 0.08);
+  --shadow-elevada: 0 2px 6px rgb(31 28 26 / 0.05), 0 18px 40px -16px rgb(31 28 26 / 0.22);
 }
 
 :root {
-  --radius: 0.7rem;
+  --radius: 0.65rem;
 
-  --background: oklch(0.985 0.003 80);
-  --foreground: oklch(0.205 0.008 50);
+  --background: oklch(0.972 0.006 75);
+  --foreground: oklch(0.21 0.008 50);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.008 50);
+  --card-foreground: oklch(0.21 0.008 50);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.008 50);
+  --popover-foreground: oklch(0.21 0.008 50);
   --primary: oklch(0.235 0.008 50);
   --primary-foreground: oklch(0.985 0.003 80);
-  --secondary: oklch(0.955 0.005 75);
+  --secondary: oklch(0.948 0.007 75);
   --secondary-foreground: oklch(0.235 0.008 50);
-  --muted: oklch(0.955 0.005 75);
-  --muted-foreground: oklch(0.49 0.012 55);
-  --accent: oklch(0.95 0.006 75);
+  --muted: oklch(0.948 0.007 75);
+  --muted-foreground: oklch(0.47 0.013 55);
+  --accent: oklch(0.945 0.008 75);
   --accent-foreground: oklch(0.235 0.008 50);
   --destructive: oklch(0.53 0.2 25);
-  --border: oklch(0.905 0.007 70);
-  --input: oklch(0.88 0.008 70);
+  --border: oklch(0.9 0.009 70);
+  --input: oklch(0.87 0.01 70);
   --ring: oklch(0.56 0.19 24);
 
   --brand: oklch(0.56 0.19 24);
+  --brand-strong: oklch(0.47 0.17 24);
   --brand-foreground: oklch(0.99 0 0);
   --brand-soft: oklch(0.56 0.19 24 / 9%);
   --gold: oklch(0.72 0.15 85);
-  --gold-soft: oklch(0.87 0.17 92 / 22%);
-  --success: oklch(0.55 0.13 155);
+  --gold-soft: oklch(0.87 0.17 92 / 24%);
+  --success: oklch(0.53 0.13 155);
   --success-soft: oklch(0.55 0.13 155 / 11%);
-  --warning: oklch(0.66 0.15 70);
+  --warning: oklch(0.64 0.15 70);
+
+  --header: oklch(0.2 0.008 50);
+  --header-foreground: oklch(0.97 0.004 80);
+  --header-muted: oklch(0.72 0.01 70);
 
   --chart-1: oklch(0.56 0.19 24);
   --chart-2: oklch(0.72 0.15 85);
@@ -127,29 +117,31 @@
   --chart-4: oklch(0.65 0.01 55);
   --chart-5: oklch(0.55 0.13 155);
 
-  --sidebar: oklch(0.975 0.004 78);
+  --sidebar: oklch(0.99 0.002 80);
   --sidebar-foreground: oklch(0.235 0.008 50);
   --sidebar-primary: oklch(0.56 0.19 24);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.006 75);
-  --sidebar-accent-foreground: oklch(0.205 0.008 50);
-  --sidebar-border: oklch(0.91 0.007 70);
+  --sidebar-accent: oklch(0.56 0.19 24 / 7%);
+  --sidebar-accent-foreground: oklch(0.21 0.008 50);
+  --sidebar-border: oklch(0.91 0.008 70);
   --sidebar-ring: oklch(0.56 0.19 24);
+
+  --puntos: oklch(0.21 0.008 50 / 7%);
 }
 
 .dark {
   --background: oklch(0.155 0.006 50);
   --foreground: oklch(0.955 0.004 80);
-  --card: oklch(0.19 0.007 50);
+  --card: oklch(0.192 0.007 50);
   --card-foreground: oklch(0.955 0.004 80);
-  --popover: oklch(0.2 0.007 50);
+  --popover: oklch(0.205 0.007 50);
   --popover-foreground: oklch(0.955 0.004 80);
   --primary: oklch(0.955 0.004 80);
   --primary-foreground: oklch(0.19 0.007 50);
   --secondary: oklch(0.245 0.007 50);
   --secondary-foreground: oklch(0.955 0.004 80);
   --muted: oklch(0.235 0.007 50);
-  --muted-foreground: oklch(0.7 0.01 65);
+  --muted-foreground: oklch(0.71 0.01 65);
   --accent: oklch(0.255 0.008 50);
   --accent-foreground: oklch(0.955 0.004 80);
   --destructive: oklch(0.68 0.19 24);
@@ -158,6 +150,7 @@
   --ring: oklch(0.66 0.18 24);
 
   --brand: oklch(0.66 0.18 24);
+  --brand-strong: oklch(0.6 0.19 24);
   --brand-foreground: oklch(0.99 0 0);
   --brand-soft: oklch(0.66 0.18 24 / 14%);
   --gold: oklch(0.85 0.16 90);
@@ -166,20 +159,26 @@
   --success-soft: oklch(0.74 0.14 155 / 13%);
   --warning: oklch(0.8 0.14 75);
 
+  --header: oklch(0.12 0.005 50);
+  --header-foreground: oklch(0.96 0.004 80);
+  --header-muted: oklch(0.68 0.01 65);
+
   --chart-1: oklch(0.66 0.18 24);
   --chart-2: oklch(0.85 0.16 90);
   --chart-3: oklch(0.7 0.01 65);
   --chart-4: oklch(0.5 0.01 55);
   --chart-5: oklch(0.74 0.14 155);
 
-  --sidebar: oklch(0.135 0.006 50);
+  --sidebar: oklch(0.14 0.006 50);
   --sidebar-foreground: oklch(0.955 0.004 80);
   --sidebar-primary: oklch(0.66 0.18 24);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.007 50);
+  --sidebar-accent: oklch(0.66 0.18 24 / 12%);
   --sidebar-accent-foreground: oklch(0.955 0.004 80);
   --sidebar-border: oklch(1 0 0 / 7%);
   --sidebar-ring: oklch(0.66 0.18 24);
+
+  --puntos: oklch(1 0 0 / 4.5%);
 }
 
 @layer base {
@@ -188,10 +187,13 @@
   }
   html {
     @apply font-sans antialiased;
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: "cv11", "ss01", "ss03";
   }
   body {
     @apply bg-background text-foreground;
+    /* Retícula de puntos muy suave: el fondo no se siente vacío */
+    background-image: radial-gradient(var(--puntos) 1px, transparent 1px);
+    background-size: 22px 22px;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -202,16 +204,27 @@
   }
 }
 
+@layer components {
+  /* Tarjeta base del portal */
+  .tarjeta {
+    @apply rounded-2xl border bg-card shadow-(--shadow-tarjeta);
+  }
+  /* Franja tricolor institucional (rojo · carbón · amarillo) */
+  .franja {
+    background: linear-gradient(90deg, #cb333b 0 46%, #2b2624 46% 72%, #ffcd00 72% 100%);
+  }
+}
+
 /* Transición de vistas: un fundido corto solo en el contenido principal al cambiar de sección. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
 }
 ::view-transition-old(contenido) {
-  animation: 120ms ease-out both vt-salir;
+  animation: 110ms ease-out both vt-salir;
 }
 ::view-transition-new(contenido) {
-  animation: 180ms cubic-bezier(0.2, 0, 0, 1) both vt-entrar;
+  animation: 170ms cubic-bezier(0.2, 0, 0, 1) both vt-entrar;
 }
 @keyframes vt-salir {
   to {
@@ -221,7 +234,7 @@
 @keyframes vt-entrar {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(5px);
   }
 }
 

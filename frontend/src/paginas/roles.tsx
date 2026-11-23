@@ -304,7 +304,7 @@ export default function Roles() {
           ) : (
             <>
               {/* Escritorio */}
-              <div className="hidden overflow-hidden rounded-2xl border bg-card md:block">
+              <div className="tarjeta hidden overflow-hidden md:block">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                     <tr>

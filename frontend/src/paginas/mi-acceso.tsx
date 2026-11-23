@@ -73,7 +73,7 @@ function TarjetaRoles({
   vacio: string;
 }) {
   return (
-    <section className="rounded-2xl border bg-card p-5 sm:p-6">
+    <section className="tarjeta p-5 sm:p-6">
       <div className="flex items-start gap-3">
         <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
           <Icono className="size-4 text-muted-foreground" />
@@ -127,7 +127,7 @@ export default function MiAccesoPagina() {
         descripcion="Así decide el portal tu acceso: tus roles del sistema institucional más los que te asignó un administrador."
       />
 
-      <section className="relative overflow-hidden rounded-2xl border bg-card p-5 sm:p-7">
+      <section className="tarjeta relative overflow-hidden p-5 sm:p-7">
         <div className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-brand/[0.07] blur-3xl" />
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
           <Avatar className="size-16 sm:size-[72px]">

@@ -53,7 +53,7 @@ function Kpi({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: indice * 0.05, duration: 0.3, ease: [0.2, 0, 0, 1] }}
-      className="relative overflow-hidden rounded-2xl border bg-card p-5"
+      className="tarjeta relative overflow-hidden p-5"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-muted-foreground">{etiqueta}</p>
@@ -86,7 +86,7 @@ const ICONOS: Record<string, LucideIcon> = {
 function Actividad() {
   const { data, isPending, error, refetch } = useQuery(auditoriaQuery);
   return (
-    <section className="rounded-2xl border bg-card p-5 sm:p-6">
+    <section className="tarjeta p-5 sm:p-6">
       <div className="mb-4 flex items-center gap-2">
         <History className="size-4 text-muted-foreground" />
         <h2 className="font-semibold">Actividad reciente</h2>
@@ -159,7 +159,7 @@ function Atajo({
     <Link
       to={a}
       viewTransition
-      className="group flex items-center gap-4 rounded-2xl border bg-card p-5 transition-[border-color,transform] duration-150 hover:border-foreground/20 active:scale-[0.99]"
+      className="group tarjeta flex items-center gap-4 p-5 transition-[border-color,transform] duration-150 hover:border-foreground/20 active:scale-[0.99]"
     >
       <div className="grid size-10 place-items-center rounded-xl bg-muted">
         <Icono className="size-4" />

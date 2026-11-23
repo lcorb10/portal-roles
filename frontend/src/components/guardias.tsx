@@ -41,6 +41,6 @@ export function RequiereAdmin() {
 export function SoloSinSesion() {
   const sesion = useAtomValue(sesionAtom);
   if (sesion === undefined) return <PantallaCarga />;
-  if (sesion) return <Navigate to="/mi-acceso" replace />;
+  if (sesion) return <Navigate to="/inicio" replace />;
   return <Outlet />;
 }
