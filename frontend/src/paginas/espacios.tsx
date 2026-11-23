@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck2, Check, CircleAlert, Loader2, Lock, MapPin, Search, Users } from "lucide-react";
+import { CalendarCheck2, Check, CircleAlert, Loader2, Lock, MapPin, Search, Settings2, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import { useAtomValue } from "jotai";
 import { toast } from "sonner";
 
 import { Encabezado } from "@/components/encabezado";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { esAdminAtom } from "@/estado/sesion";
 import { disponibilidadQuery, espaciosQuery, reglasQuery, useReservar } from "@/consultas";
 import { mensaje } from "@/lib/api";
 import { fechaLarga, hora, horaLocal, nombreDia, numeroDia, rangoHoras, sumarDias } from "@/lib/fechas";
@@ -96,6 +98,7 @@ function Tarjeta({ e, alAbrir, indice }: { e: Espacio; alAbrir: () => void; indi
 // ── Planificador de la reserva ────────────────────────────────────────────────────────────
 
 function Planificador({ e, reglas }: { e: Espacio; reglas: ReglasReserva }) {
+  const esAdmin = useAtomValue(esAdminAtom);
   const [fecha, setFecha] = useState(reglas.hoy);
   const [inicio, setInicio] = useState<number | null>(null);
   const [fin, setFin] = useState<number | null>(null);
@@ -298,6 +301,16 @@ function Planificador({ e, reglas }: { e: Espacio; reglas: ReglasReserva }) {
           <div>
             <p className="font-medium">No puedes reservar este espacio</p>
             <p className="mt-0.5 text-muted-foreground">{e.motivo}</p>
+            {esAdmin && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                El perfil de administrador no habilita reservas: lo deciden los roles. Puedes cambiar qué roles
+                habilitan este espacio en{" "}
+                <Link to="/admin/reservas" className="font-medium text-brand hover:underline">
+                  Reservas y espacios
+                </Link>
+                .
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -359,6 +372,7 @@ type Filtro = "todos" | "mios";
 export default function Espacios() {
   const { data, isPending, error, refetch } = useQuery(espaciosQuery);
   const reglas = useQuery(reglasQuery);
+  const esAdmin = useAtomValue(esAdminAtom);
   const [params, setParams] = useSearchParams();
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -379,6 +393,15 @@ export default function Espacios() {
       <Encabezado
         antetitulo="Espacios del campus"
         titulo="Reserva un espacio"
+        acciones={
+          esAdmin && (
+            <Button asChild variant="outline">
+              <Link to="/admin/reservas" viewTransition>
+                <Settings2 /> Gestionar espacios
+              </Link>
+            </Button>
+          )
+        }
         descripcion={
           reglas.data
             ? `Tus roles deciden qué puedes reservar. Horario de ${hora(reglas.data.hora_apertura)} a ${hora(reglas.data.hora_cierre)}, hasta ${reglas.data.max_horas} horas por reserva y ${reglas.data.dias_adelante} días adelante.`
