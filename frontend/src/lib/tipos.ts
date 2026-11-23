@@ -124,6 +124,18 @@ export interface Reserva {
   estado: "ACTIVA" | "CANCELADA";
   creada_en: string;
   cancelada_por: string | null;
+  cancelada_por_otro: boolean;
+  motivo_cancelacion: string | null;
+}
+
+export interface Aviso {
+  id: number;
+  titulo: string;
+  detalle: string;
+  motivo: string | null;
+  por: string | null;
+  espacio_codigo: string;
+  fecha: string;
 }
 
 export interface FranjaOcupada {

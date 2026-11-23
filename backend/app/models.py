@@ -121,6 +121,9 @@ class Reserva(Base):
     estado: Mapped[str] = mapped_column(String(12), default=EstadoReserva.ACTIVA)
     creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=ahora)
     cancelada_por: Mapped[str | None] = mapped_column(String(60))
+    motivo_cancelacion: Mapped[str | None] = mapped_column(String(300))
+    # True cuando otra persona (un admin) la canceló y el dueño aún no ha visto el aviso.
+    aviso_pendiente: Mapped[bool] = mapped_column(default=False)
 
     espacio: Mapped[Espacio] = relationship(lazy="selectin")
     usuario: Mapped[Usuario] = relationship(lazy="selectin")

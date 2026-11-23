@@ -119,12 +119,12 @@ async def test_cancelar_propia_y_ajena(app, ana) -> None:
     sala = (await espacios_de(ana))["sala-estudio"]["id"]
     reserva = (await reservar(ana, sala)).json()
     carlos = await entrar(app, "carlos.profesor")
-    assert (await carlos.delete(f"/api/reservas/{reserva['id']}")).status_code == 404  # no es suya
+    assert (await carlos.post(f"/api/reservas/{reserva['id']}/cancelar", json={})).status_code == 404  # no es suya
     await carlos.aclose()
-    assert (await ana.delete(f"/api/reservas/{reserva['id']}")).status_code == 204
+    assert (await ana.post(f"/api/reservas/{reserva['id']}/cancelar", json={})).status_code == 204
     mias = (await ana.get("/api/reservas/mias")).json()
     assert mias[0]["estado"] == "CANCELADA"
-    assert (await ana.delete(f"/api/reservas/{reserva['id']}")).status_code == 409
+    assert (await ana.post(f"/api/reservas/{reserva['id']}/cancelar", json={})).status_code == 409
 
 
 async def test_admin_ve_todas_cancela_y_edita_roles(admin, ana) -> None:
@@ -133,7 +133,20 @@ async def test_admin_ve_todas_cancela_y_edita_roles(admin, ana) -> None:
 
     todas = (await admin.get("/api/admin/reservas")).json()
     assert [r["usuario"] for r in todas] == ["ana.estudiante"]
-    assert (await admin.delete(f"/api/reservas/{reserva['id']}")).status_code == 204
+    url = f"/api/reservas/{reserva['id']}/cancelar"
+    r = await admin.post(url, json={})  # sin motivo: no se puede
+    assert r.status_code == 422 and "motivo" in r.json()["detail"]
+    assert (await admin.post(url, json={"motivo": "Evento institucional en la biblioteca"})).status_code == 204
+
+    # Ana recibe el aviso con el motivo
+    avisos = (await ana.get("/api/avisos")).json()
+    assert len(avisos) == 1
+    assert avisos[0]["motivo"] == "Evento institucional en la biblioteca"
+    assert avisos[0]["por"] == "admin.prueba"
+    mia = (await ana.get("/api/reservas/mias")).json()[0]
+    assert mia["cancelada_por_otro"] and mia["motivo_cancelacion"] == "Evento institucional en la biblioteca"
+    assert (await ana.post("/api/avisos/leidos")).status_code == 204
+    assert (await ana.get("/api/avisos")).json() == []
 
     # habilitar el auditorio para ESTUDIANTES aplica de inmediato
     roles = {r["codigo"]: r["id"] for r in (await admin.get("/api/admin/roles")).json()}
@@ -154,3 +167,14 @@ async def test_rutas_admin_de_espacios_protegidas(anonimo, ana) -> None:
     assert (await anonimo.get("/api/admin/reservas")).status_code == 401
     assert (await ana.get("/api/admin/reservas")).status_code == 403
     assert (await ana.put("/api/admin/espacios/1", json={"activo": False})).status_code == 403
+
+
+async def test_cancelar_la_propia_no_genera_aviso(ana) -> None:
+    sala = (await espacios_de(ana))["sala-estudio"]["id"]
+    reserva = (await reservar(ana, sala)).json()
+    assert (await ana.post(f"/api/reservas/{reserva['id']}/cancelar", json={})).status_code == 204
+    assert (await ana.get("/api/avisos")).json() == []
+
+
+async def test_avisos_requieren_sesion(anonimo) -> None:
+    assert (await anonimo.get("/api/avisos")).status_code == 401

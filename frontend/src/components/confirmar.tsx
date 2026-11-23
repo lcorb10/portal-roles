@@ -23,6 +23,8 @@ export function Confirmar({
   pendiente,
   error,
   alConfirmar,
+  contenido,
+  bloqueado,
 }: {
   abierto: boolean;
   alCambiar: (abierto: boolean) => void;
@@ -32,6 +34,10 @@ export function Confirmar({
   pendiente: boolean;
   error?: string | null;
   alConfirmar: () => void;
+  /** Campos extra (p. ej. el motivo de una cancelación). */
+  contenido?: ReactNode;
+  /** Deshabilita la acción mientras falten datos. */
+  bloqueado?: boolean;
 }) {
   return (
     <AlertDialog open={abierto} onOpenChange={(v) => !pendiente && alCambiar(v)}>
@@ -42,6 +48,7 @@ export function Confirmar({
             <div>{descripcion}</div>
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {contenido}
         {error && (
           <div
             role="alert"
@@ -54,7 +61,7 @@ export function Confirmar({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pendiente}>{error ? "Cerrar" : "Cancelar"}</AlertDialogCancel>
           {!error && (
-            <Button variant="destructive" onClick={alConfirmar} disabled={pendiente}>
+            <Button variant="destructive" onClick={alConfirmar} disabled={pendiente || bloqueado}>
               {pendiente && <Loader2 className="animate-spin" />}
               {textoAccion}
             </Button>

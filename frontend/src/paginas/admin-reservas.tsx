@@ -176,7 +176,7 @@ function ListaEspacios() {
 function ListaReservas() {
   const { data, isPending, error, refetch } = useQuery(reservasAdminQuery);
   const reglas = useQuery(reglasQuery);
-  const { pedir, dialogo } = useConfirmarCancelacion();
+  const { pedir, dialogo } = useConfirmarCancelacion({ requiereMotivo: true });
   const hoy = reglas.data?.hoy ?? hoyLocal();
 
   if (isPending) return <CargandoFilas />;

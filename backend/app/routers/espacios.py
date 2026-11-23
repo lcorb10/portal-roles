@@ -20,6 +20,8 @@ from app.espacios import (
 )
 from app.models import Espacio, EstadoReserva, Reserva, Rol
 from app.schemas import (
+    Aviso,
+    CancelarIn,
     DisponibilidadOut,
     EspacioEditar,
     EspacioOut,
@@ -73,6 +75,8 @@ def reserva_out(r: Reserva) -> ReservaOut:
         estado=EstadoReserva(r.estado),
         creada_en=r.creada_en,
         cancelada_por=r.cancelada_por,
+        cancelada_por_otro=r.cancelada_por is not None and r.cancelada_por != r.usuario.usuario,
+        motivo_cancelacion=r.motivo_cancelacion,
     )
 
 
@@ -175,19 +179,63 @@ async def mis_reservas(contexto: ContextoDep, db: DbDep) -> list[ReservaOut]:
     return [reserva_out(r) for r in reservas]
 
 
-@router.delete("/reservas/{reserva_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def cancelar(reserva_id: Id, contexto: ContextoDep, db: DbDep) -> Response:
+@router.post("/reservas/{reserva_id}/cancelar", status_code=status.HTTP_204_NO_CONTENT)
+async def cancelar(reserva_id: Id, datos: CancelarIn, contexto: ContextoDep, db: DbDep) -> Response:
     reserva = await db.get(Reserva, reserva_id)
     if reserva is None or (reserva.usuario_id != contexto.usuario.id and not contexto.es_admin):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="La reserva no existe.")
     if reserva.estado != EstadoReserva.ACTIVA:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="La reserva ya estaba cancelada.")
+    ajena = reserva.usuario_id != contexto.usuario.id
+    if ajena and (not datos.motivo or len(datos.motivo) < 5):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Escribe el motivo de la cancelación (mínimo 5 caracteres): la persona lo verá.",
+        )
     reserva.estado = EstadoReserva.CANCELADA
     reserva.cancelada_por = contexto.usuario.usuario
+    reserva.motivo_cancelacion = datos.motivo or None
+    reserva.aviso_pendiente = ajena
     detalle = f"Canceló la reserva de {reserva.espacio.nombre} del {reserva.fecha:%d/%m}"
-    if reserva.usuario_id != contexto.usuario.id:
-        detalle += f" (era de {reserva.usuario.usuario})"
+    if ajena:
+        detalle += f" (era de {reserva.usuario.usuario}). Motivo: {datos.motivo}"
     auditar(db, contexto.usuario.usuario, "RESERVA_CANCELADA", detalle + ".")
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ── Avisos para la persona ────────────────────────────────────────────────────────────
+
+
+@router.get("/avisos")
+async def avisos(contexto: ContextoDep, db: DbDep) -> list[Aviso]:
+    """Reservas de la persona que canceló un administrador y que aún no ha visto."""
+    reservas = await db.scalars(
+        select(Reserva)
+        .where(Reserva.usuario_id == contexto.usuario.id, Reserva.aviso_pendiente)
+        .order_by(Reserva.id.desc())
+    )
+    return [
+        Aviso(
+            id=r.id,
+            titulo="Cancelaron tu reserva",
+            detalle=f"{r.espacio.nombre}, {r.fecha:%d/%m} de {r.hora_inicio}:00 a {r.hora_fin}:00.",
+            motivo=r.motivo_cancelacion,
+            por=r.cancelada_por,
+            espacio_codigo=r.espacio.codigo,
+            fecha=r.creada_en,
+        )
+        for r in reservas
+    ]
+
+
+@router.post("/avisos/leidos", status_code=status.HTTP_204_NO_CONTENT)
+async def marcar_leidos(contexto: ContextoDep, db: DbDep) -> Response:
+    reservas = await db.scalars(
+        select(Reserva).where(Reserva.usuario_id == contexto.usuario.id, Reserva.aviso_pendiente)
+    )
+    for r in reservas:
+        r.aviso_pendiente = False
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

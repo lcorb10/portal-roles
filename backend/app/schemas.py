@@ -232,6 +232,23 @@ class ReservaOut(BaseModel):
     estado: EstadoReserva
     creada_en: datetime
     cancelada_por: str | None
+    cancelada_por_otro: bool
+    motivo_cancelacion: str | None
+
+
+class CancelarIn(Entrada):
+    # Obligatorio cuando un administrador cancela la reserva de otra persona: ella lo verá.
+    motivo: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] | None = None
+
+
+class Aviso(BaseModel):
+    id: int  # id de la reserva
+    titulo: str
+    detalle: str
+    motivo: str | None
+    por: str | None
+    espacio_codigo: str
+    fecha: datetime
 
 
 class FranjaOcupada(BaseModel):

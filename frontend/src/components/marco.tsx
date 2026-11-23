@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Buscador } from "@/components/buscador";
 import { Logotipo } from "@/components/marca";
+import { Notificaciones } from "@/components/notificaciones";
 import { ADMINISTRACION, AYUDA, MI_PORTAL, type Enlace } from "@/components/navegacion";
 import { SelectorTema } from "@/components/selector-tema";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -209,6 +210,7 @@ export function Marco() {
           <Buscador className="mx-auto hidden w-full max-w-md md:flex" />
 
           <div className="ml-auto flex items-center gap-1 md:ml-0">
+            <Notificaciones />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link

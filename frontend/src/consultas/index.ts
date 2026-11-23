@@ -1,9 +1,11 @@
 import { keepPreviousData, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
+import { toast } from "sonner";
 
 import { sesionAtom } from "@/estado/sesion";
 import { api } from "@/lib/api";
 import type {
+  Aviso,
   Disponibilidad,
   Espacio,
   EventoAuditoria,
@@ -33,6 +35,7 @@ export const claves = {
   misReservas: ["reservas", "mias"] as const,
   reservasAdmin: ["admin", "reservas"] as const,
   verificar: (usuario: string) => ["admin", "verificar", usuario] as const,
+  avisos: ["reservas", "avisos"] as const,
 };
 
 // ── Consultas ───────────────────────────────────────────────────────────────────────────
@@ -293,7 +296,8 @@ export function useReservar() {
 export function useCancelarReserva() {
   const refrescar = useRefrescarReservas();
   return useMutation({
-    mutationFn: (id: number) => api<void>(`/reservas/${id}`, { metodo: "DELETE" }),
+    mutationFn: ({ id, motivo }: { id: number; motivo?: string }) =>
+      api<void>(`/reservas/${id}/cancelar`, { metodo: "POST", cuerpo: { motivo: motivo || null } }),
     onSuccess: refrescar,
   });
 }
@@ -309,5 +313,25 @@ export function useEditarEspacio() {
       cambios: { activo?: boolean; capacidad?: number; rol_ids?: number[] };
     }) => api<Espacio>(`/admin/espacios/${id}`, { metodo: "PUT", cuerpo: cambios }),
     onSuccess: refrescar,
+  });
+}
+
+// ── Avisos (reservas canceladas por un administrador) ───────────────────────────────────
+
+export const avisosQuery = queryOptions({
+  queryKey: claves.avisos,
+  queryFn: () => api<Aviso[]>("/avisos"),
+  refetchInterval: 30_000,
+  refetchOnWindowFocus: true,
+});
+
+export function useMarcarAvisosLeidos() {
+  const cliente = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<void>("/avisos/leidos", { metodo: "POST" }),
+    onSuccess: () => {
+      cliente.setQueryData(claves.avisos, []);
+      toast.dismiss();
+    },
   });
 }

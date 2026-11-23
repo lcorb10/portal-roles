@@ -16,9 +16,10 @@ import { motion } from "motion/react";
 import { Link } from "react-router";
 
 import { Vacio } from "@/components/estados";
+import { TarjetaAviso } from "@/components/notificaciones";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { espaciosQuery, misReservasQuery, reglasQuery } from "@/consultas";
+import { avisosQuery, espaciosQuery, misReservasQuery, reglasQuery, useMarcarAvisosLeidos } from "@/consultas";
 import { sesionAtom } from "@/estado/sesion";
 import { cuando, fechaLarga, hoyLocal, rangoHoras } from "@/lib/fechas";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,8 @@ export default function Inicio() {
   const reservas = useQuery(misReservasQuery);
   const espacios = useQuery(espaciosQuery);
   const reglas = useQuery(reglasQuery);
+  const avisos = useQuery(avisosQuery);
+  const leer = useMarcarAvisosLeidos();
   const admin = yo.perfil === "ADMINISTRADOR";
   const hoy = reglas.data?.hoy ?? hoyLocal();
 
@@ -138,6 +141,33 @@ export default function Inicio() {
         </div>
         <div className="franja h-1" />
       </motion.section>
+
+      {avisos.data && avisos.data.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          role="alert"
+          className="tarjeta mt-6 border-destructive/30 bg-destructive/[0.04] p-5"
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="font-semibold tracking-tight text-destructive">
+              {avisos.data.length === 1
+                ? "Un administrador canceló una de tus reservas"
+                : `Cancelaron ${avisos.data.length} de tus reservas`}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => leer.mutate()} disabled={leer.isPending}>
+              Entendido
+            </Button>
+          </div>
+          <ul className="space-y-3">
+            {avisos.data.map((a) => (
+              <li key={a.id}>
+                <TarjetaAviso a={a} />
+              </li>
+            ))}
+          </ul>
+        </motion.section>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
         <Seccion titulo="Tus próximas reservas" Icono={CalendarClock} enlace={{ a: "/reservas", texto: "Ver todas" }}>

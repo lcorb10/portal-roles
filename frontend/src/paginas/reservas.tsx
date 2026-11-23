@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarPlus, Clock, MapPin, Users, X } from "lucide-react";
+import { CalendarPlus, Clock, MapPin, Users, X, MessageSquareWarning } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -10,6 +10,8 @@ import { Encabezado } from "@/components/encabezado";
 import { CargandoFilas, ErrorCarga, Vacio } from "@/components/estados";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { misReservasQuery, reglasQuery, useCancelarReserva } from "@/consultas";
 import { mensaje } from "@/lib/api";
 import { cuando, hoyLocal, nombreDia, numeroDia, rangoHoras } from "@/lib/fechas";
@@ -52,7 +54,7 @@ export function FilaReserva({
           <p className={cn("font-semibold tracking-tight", cancelada && "line-through")}>{r.espacio}</p>
           {cancelada ? (
             <Badge variant="outline" className="text-muted-foreground">
-              Cancelada{r.cancelada_por && r.cancelada_por !== r.usuario ? ` por ${r.cancelada_por}` : ""}
+              {r.cancelada_por_otro ? "Cancelada por administración" : "Cancelada"}
             </Badge>
           ) : pasada ? (
             <Badge variant="secondary">Realizada</Badge>
@@ -79,6 +81,15 @@ export function FilaReserva({
           )}
           <span className="text-muted-foreground">{r.motivo}</span>
         </p>
+        {r.cancelada_por_otro && r.motivo_cancelacion && (
+          <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-destructive/[0.06] px-2.5 py-1.5 text-xs">
+            <MessageSquareWarning className="mt-px size-3.5 shrink-0 text-destructive" />
+            <span>
+              <span className="font-medium">Motivo de la cancelación:</span> {r.motivo_cancelacion}
+              <span className="text-muted-foreground"> · {r.cancelada_por}</span>
+            </span>
+          </p>
+        )}
       </div>
       {alCancelar && !cancelada && !pasada && (
         <Button
@@ -95,10 +106,13 @@ export function FilaReserva({
   );
 }
 
-export function useConfirmarCancelacion() {
+/** Diálogo para cancelar. Si `requiereMotivo` (admin cancelando la reserva de otra persona), pide el motivo,
+ *  que la persona verá en su aviso. */
+export function useConfirmarCancelacion({ requiereMotivo = false }: { requiereMotivo?: boolean } = {}) {
   const cancelar = useCancelarReserva();
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState("");
   const dialogo = (
     <Confirmar
       abierto={!!reserva}
@@ -107,29 +121,53 @@ export function useConfirmarCancelacion() {
       descripcion={
         reserva && (
           <p>
-            {reserva.espacio}, {rangoHoras(reserva.hora_inicio, reserva.hora_fin)}. El horario queda libre para otras
-            personas.
+            {reserva.espacio}, {rangoHoras(reserva.hora_inicio, reserva.hora_fin)}
+            {requiereMotivo
+              ? ` · reserva de ${reserva.nombre_usuario}. Le avisaremos con el motivo que escribas.`
+              : ". El horario queda libre para otras personas."}
           </p>
         )
       }
+      contenido={
+        requiereMotivo && (
+          <div className="space-y-1.5">
+            <Label htmlFor="motivo-cancelacion">Motivo (lo verá la persona)</Label>
+            <Textarea
+              id="motivo-cancelacion"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ej.: El espacio se usará para un evento institucional."
+              maxLength={300}
+              rows={3}
+            />
+          </div>
+        )
+      }
+      bloqueado={requiereMotivo && motivo.trim().length < 5}
       textoAccion="Cancelar reserva"
       pendiente={cancelar.isPending}
       error={error}
       alConfirmar={() =>
         reserva &&
-        cancelar.mutate(reserva.id, {
-          onSuccess: () => {
-            toast.success("Reserva cancelada");
-            setReserva(null);
+        cancelar.mutate(
+          { id: reserva.id, motivo: requiereMotivo ? motivo.trim() : undefined },
+          {
+            onSuccess: () => {
+              toast.success(
+                requiereMotivo ? `Reserva cancelada. Le avisamos a ${reserva.nombre_usuario}.` : "Reserva cancelada",
+              );
+              setReserva(null);
+            },
+            onError: (e) => setError(mensaje(e)),
           },
-          onError: (e) => setError(mensaje(e)),
-        })
+        )
       }
     />
   );
   return {
     pedir: (r: Reserva) => {
       setError(null);
+      setMotivo("");
       setReserva(r);
     },
     dialogo,
