@@ -147,13 +147,17 @@ class DataMockClient:
     async def roles_de(self, usuario: str) -> list[str]:
         """Roles institucionales. Una persona que no existe en el sistema de roles (codigo "404",
         aunque el HTTP sea 200) no tiene roles institucionales, pero puede tener roles asignados."""
+        return (await self.roles_de_detalle(usuario))[1]
+
+    async def roles_de_detalle(self, usuario: str) -> tuple[bool, list[str]]:
+        """(¿existe en el sistema de roles?, roles)."""
         cuerpo = await self._get_con_token(f"/roles/{quote(usuario, safe='')}")
         codigo = cuerpo.get("codigo")
         if codigo == "404":
-            return []
+            return False, []
         if codigo != "200":
             raise ServicioNoDisponible(f"roles codigo {codigo}")
-        return self._roles_de_resultado(self._resultado(cuerpo))
+        return True, self._roles_de_resultado(self._resultado(cuerpo))
 
     async def buscar_personas(self, texto: str) -> list[dict[str, str]]:
         cuerpo = await self._get_con_token("/personas", params={"buscar": texto})

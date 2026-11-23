@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, StringConstraints
 
-from app.models import Origen, Perfil
+from app.models import EstadoReserva, Origen, Perfil
 
 Texto = Annotated[str, StringConstraints(strip_whitespace=True)]
 
@@ -147,11 +147,18 @@ class PreguntaOut(BaseModel):
 
 class PreguntaIn(Entrada):
     pregunta: Annotated[str, Field(min_length=1, max_length=500)]
+    # Estricto (por defecto): la pregunta va tal cual a la IA, como pide el enunciado.
+    # Sin modo estricto, el intérprete local traduce el mensaje a la pregunta oficial más parecida.
+    estricto: bool = True
 
 
 class RespuestaAsistente(BaseModel):
     pregunta: str
-    respuesta: str | None  # None: la IA no respondió (no se inventa nada)
+    respuesta: str | None  # None: no hay respuesta (no se inventa nada)
+    # "ia": la respondió la IA de dataMock; "portal": mensaje fijo del portal (saludo, ayuda…)
+    origen: str | None = None
+    # Pregunta oficial que se le envió a la IA cuando el intérprete reconoció la intención.
+    interpretada_como: str | None = None
 
 
 # ── Auditoría ─────────────────────────────────────────────────────────────────────────────
@@ -173,3 +180,91 @@ class Resumen(BaseModel):
     usuarios_activos: int
     roles_activos: int
     roles_total: int
+
+
+# ── Espacios y reservas ───────────────────────────────────────────────────────────────────
+
+
+class EspacioOut(BaseModel):
+    id: int
+    codigo: str
+    nombre: str
+    tipo: str
+    ubicacion: str
+    capacidad: int
+    descripcion: str
+    activo: bool
+    roles_permitidos: list[str]
+    rol_ids: list[int]
+    puede_reservar: bool
+    motivo: str | None  # por qué no puede reservarlo
+    habilitado_por: list[str]  # roles de la persona que le permiten reservarlo
+
+
+class EspacioEditar(Entrada):
+    activo: bool | None = None
+    capacidad: Annotated[int, Field(ge=1, le=2000)] | None = None
+    rol_ids: list[int] | None = None
+
+
+class ReservaCrear(Entrada):
+    espacio_id: Annotated[int, Field(ge=1)]
+    fecha: date
+    hora_inicio: Annotated[int, Field(ge=0, le=23)]
+    hora_fin: Annotated[int, Field(ge=1, le=24)]
+    motivo: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
+    asistentes: Annotated[int, Field(ge=1, le=2000)] = 1
+
+
+class ReservaOut(BaseModel):
+    id: int
+    espacio_id: int
+    espacio: str
+    espacio_codigo: str
+    ubicacion: str
+    usuario: str
+    nombre_usuario: str
+    fecha: date
+    hora_inicio: int
+    hora_fin: int
+    motivo: str
+    asistentes: int
+    estado: EstadoReserva
+    creada_en: datetime
+    cancelada_por: str | None
+
+
+class FranjaOcupada(BaseModel):
+    hora_inicio: int
+    hora_fin: int
+    propia: bool
+    por: str | None
+
+
+class DisponibilidadOut(BaseModel):
+    fecha: date
+    ocupadas: list[FranjaOcupada]
+
+
+class ReglasReserva(BaseModel):
+    hora_apertura: int
+    hora_cierre: int
+    max_horas: int
+    dias_adelante: int
+    max_reservas: int
+    hoy: date
+
+
+# ── Verificador de acceso ─────────────────────────────────────────────────────────────────
+
+
+class Verificacion(BaseModel):
+    usuario: str
+    entraria: bool
+    mensaje: str  # el mismo que vería en la pantalla de inicio
+    perfil: Perfil | None
+    registrado: bool
+    activo: bool | None
+    en_sistema_de_roles: bool | None  # None: el servicio falló
+    roles_institucionales: list[RolAcceso]
+    roles_asignados: list[RolAcceso]

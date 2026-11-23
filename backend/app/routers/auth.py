@@ -14,6 +14,7 @@ from app.acceso import (
 from app.datamock import CredencialesInvalidas, ServicioNoDisponible
 from app.db import DbDep
 from app.deps import Contexto, ContextoDep, DataMockDep, SettingsDep
+from app.espacios import asegurar_espacios
 from app.models import Origen, Perfil, Usuario, ahora
 from app.schemas import LoginIn, MiAcceso, RolAcceso
 from app.servicios import (
@@ -85,6 +86,7 @@ async def login(
     try:
         institucionales = await mock.roles_de(username)
         await asegurar_catalogo(db, mock)
+        await asegurar_espacios(db)
     except ServicioNoDisponible:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=MSG_SERVICIO_ROLES) from None
 

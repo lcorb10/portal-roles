@@ -1,9 +1,9 @@
 """Tablas de la aplicación (SQLAlchemy 2, estilo tipado)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Table, Text, func
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, SmallInteger, String, Table, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -74,3 +74,53 @@ class Auditoria(Base):
     actor: Mapped[str] = mapped_column(String(60))
     accion: Mapped[str] = mapped_column(String(40))
     detalle: Mapped[str] = mapped_column(Text)
+
+
+# ── Reserva de espacios ─────────────────────────────────────────────────────────────────
+
+# Roles que pueden reservar cada espacio. Si se elimina un rol del catálogo, deja de habilitar el espacio.
+espacio_roles = Table(
+    "espacio_roles",
+    Base.metadata,
+    Column("espacio_id", ForeignKey("espacios.id", ondelete="CASCADE"), primary_key=True),
+    Column("rol_id", ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class EstadoReserva(StrEnum):
+    ACTIVA = "ACTIVA"
+    CANCELADA = "CANCELADA"
+
+
+class Espacio(Base):
+    __tablename__ = "espacios"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    codigo: Mapped[str] = mapped_column(String(40), unique=True)  # también nombra la foto del frontend
+    nombre: Mapped[str] = mapped_column(String(120))
+    tipo: Mapped[str] = mapped_column(String(40))
+    ubicacion: Mapped[str] = mapped_column(String(120))
+    capacidad: Mapped[int] = mapped_column(Integer)
+    descripcion: Mapped[str] = mapped_column(Text, default="")
+    activo: Mapped[bool] = mapped_column(default=True)
+
+    roles: Mapped[list[Rol]] = relationship(secondary=espacio_roles, lazy="selectin", order_by=Rol.id)
+
+
+class Reserva(Base):
+    __tablename__ = "reservas"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    espacio_id: Mapped[int] = mapped_column(ForeignKey("espacios.id", ondelete="CASCADE"), index=True)
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), index=True)
+    fecha: Mapped[date] = mapped_column(Date, index=True)
+    hora_inicio: Mapped[int] = mapped_column(SmallInteger)  # 7..20
+    hora_fin: Mapped[int] = mapped_column(SmallInteger)  # 8..21 (exclusiva)
+    motivo: Mapped[str] = mapped_column(String(200))
+    asistentes: Mapped[int] = mapped_column(Integer, default=1)
+    estado: Mapped[str] = mapped_column(String(12), default=EstadoReserva.ACTIVA)
+    creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=ahora)
+    cancelada_por: Mapped[str | None] = mapped_column(String(60))
+
+    espacio: Mapped[Espacio] = relationship(lazy="selectin")
+    usuario: Mapped[Usuario] = relationship(lazy="selectin")

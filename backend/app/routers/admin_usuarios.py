@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, st
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
+from app.acceso import MSG_DESACTIVADO, MSG_SERVICIO_ROLES, MSG_SIN_ROL, evaluar, evaluar_rol, normalizar
 from app.datamock import ServicioNoDisponible
 from app.db import DbDep
 from app.deps import AdminDep, DataMockDep, SettingsDep, solo_admin
@@ -12,12 +13,20 @@ from app.schemas import (
     AuditoriaOut,
     PersonaDirectorio,
     Resumen,
+    RolAcceso,
     RolResumen,
     UsuarioCrear,
     UsuarioEditar,
     UsuarioOut,
+    Verificacion,
 )
-from app.servicios import auditar, contar_usuarios, es_admin_por_configuracion, perfil_efectivo
+from app.servicios import (
+    auditar,
+    cargar_catalogo,
+    contar_usuarios,
+    es_admin_por_configuracion,
+    perfil_efectivo,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["usuarios"], dependencies=[Depends(solo_admin)])
 
@@ -200,4 +209,75 @@ async def resumen(db: DbDep, settings: SettingsDep) -> Resumen:
         usuarios_activos=activos,
         roles_activos=roles_activos,
         roles_total=roles_total,
+    )
+
+
+@router.get("/verificar/{usuario}")
+async def verificar_acceso(
+    usuario: Annotated[str, Path(min_length=2, max_length=60)],
+    db: DbDep,
+    mock: DataMockDep,
+    settings: SettingsDep,
+) -> Verificacion:
+    """¿Entraría esta persona? Aplica las mismas reglas del inicio de sesión, consultando el servicio de
+    roles en vivo, pero sin contraseña y sin crear sesión ni registrar a nadie."""
+    nombre = usuario.strip().lower()
+    registrado = await db.scalar(select(Usuario).where(Usuario.usuario == nombre))
+    catalogo = await cargar_catalogo(db)
+    asignados = [r.codigo for r in registrado.roles] if registrado else []
+    perfil = (
+        perfil_efectivo(registrado, settings)
+        if registrado
+        else (Perfil.ADMINISTRADOR if es_admin_por_configuracion(nombre, settings) else Perfil.CONSULTANTE)
+    )
+
+    def lista(textos: list[str]) -> list[RolAcceso]:
+        vistos: set[str] = set()
+        salida = []
+        for texto in textos:
+            clave = normalizar(texto)
+            if clave and clave not in vistos:
+                vistos.add(clave)
+                rol = evaluar_rol(texto, catalogo)
+                salida.append(RolAcceso(**{k: getattr(rol, k) for k in RolAcceso.model_fields}))
+        return salida
+
+    base = {
+        "usuario": nombre,
+        "registrado": registrado is not None,
+        "activo": registrado.activo if registrado else None,
+        "roles_asignados": lista(asignados),
+    }
+    if registrado is not None and not registrado.activo:
+        return Verificacion(
+            **base,
+            entraria=False,
+            mensaje=MSG_DESACTIVADO,
+            perfil=perfil,
+            en_sistema_de_roles=None,
+            roles_institucionales=[],
+        )
+    try:
+        existe, institucionales = await mock.roles_de_detalle(nombre)
+    except ServicioNoDisponible:
+        return Verificacion(
+            **base,
+            entraria=False,
+            mensaje=MSG_SERVICIO_ROLES,
+            perfil=None,
+            en_sistema_de_roles=None,
+            roles_institucionales=[],
+        )
+    evaluacion = evaluar(institucionales, asignados, catalogo)
+    return Verificacion(
+        **base,
+        entraria=evaluacion.tiene_acceso,
+        mensaje=(
+            f"Entraría como {perfil} por {', '.join(r.codigo for r in evaluacion.roles if r.da_acceso)}."
+            if evaluacion.tiene_acceso
+            else evaluacion.motivo_rechazo or MSG_SIN_ROL
+        ),
+        perfil=perfil if evaluacion.tiene_acceso else None,
+        en_sistema_de_roles=existe,
+        roles_institucionales=lista(institucionales),
     )

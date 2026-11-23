@@ -11,8 +11,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import Settings
 from app.datamock import DataMockClient, ServicioNoDisponible
 from app.db import crear_engine, crear_sessionmaker
+from app.espacios import asegurar_espacios
 from app.models import Base
-from app.routers import admin_roles, admin_usuarios, asistente, auth
+from app.routers import admin_roles, admin_usuarios, asistente, auth, espacios
 from app.servicios import asegurar_catalogo
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -25,6 +26,7 @@ async def cargar_catalogo_con_reintentos(app: FastAPI, intentos: int = 15) -> No
         try:
             async with app.state.sessionmaker() as db:
                 await asegurar_catalogo(db, app.state.datamock)
+                await asegurar_espacios(db)
             return
         except ServicioNoDisponible:
             log.warning("dataMock aún no responde (intento %s/%s)", intento, intentos)
@@ -80,8 +82,9 @@ def create_app(settings: Settings | None = None, datamock: DataMockClient | None
             db = "sin conexión"
         return {"estado": "ok", "base_de_datos": db}
 
-    for modulo in (auth, admin_roles, admin_usuarios, asistente):
+    for modulo in (auth, admin_roles, admin_usuarios, asistente, espacios):
         app.include_router(modulo.router)
+    app.include_router(espacios.admin)
     return app
 
 

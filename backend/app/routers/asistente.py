@@ -4,6 +4,8 @@
 - El backend reemplaza las {variables} con datos reales.
 - Las preguntas de perfil ADMINISTRADOR solo se responden a administradores.
 - Si la IA no responde, no se inventa ninguna respuesta (respuesta = null).
+- Sin modo estricto, un intérprete local traduce el mensaje a la pregunta oficial más parecida
+  (ver app/interprete.py); la respuesta sigue viniendo siempre de la IA.
 """
 
 import logging
@@ -15,6 +17,7 @@ from app.acceso import EGRESADOS, normalizar
 from app.datamock import ServicioNoDisponible
 from app.db import DbDep
 from app.deps import ContextoDep, DataMockDep, SettingsDep
+from app.interprete import interpretar, respuesta_de_charla
 from app.models import Perfil
 from app.schemas import PreguntaIn, PreguntaOut, RespuestaAsistente
 from app.servicios import cargar_catalogo, contar_usuarios
@@ -74,22 +77,52 @@ async def valores(
 async def preguntar(
     entrada: PreguntaIn, contexto: ContextoDep, db: DbDep, mock: DataMockDep, settings: SettingsDep
 ) -> RespuestaAsistente:
+    pregunta = entrada.pregunta
+    interpretada: str | None = None
+
+    if not entrada.estricto:
+        # Intérprete local: solo elige QUÉ pregunta oficial enviar; la respuesta la da la IA.
+        try:
+            oficiales = await mock.preguntas_ia()
+        except ServicioNoDisponible:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=MSG_IA_CAIDA) from None
+        visibles = [p for p in oficiales if puede_ver(str(p.get("perfil", "")), contexto.perfil)]
+        exacta = any(str(p.get("pregunta", "")).strip() == pregunta.strip() for p in oficiales)
+        if not exacta:
+            resultado_local = interpretar(pregunta)
+            if resultado_local.tipo == "charla":
+                return RespuestaAsistente(
+                    pregunta=pregunta,
+                    respuesta=respuesta_de_charla(
+                        resultado_local.intencion or "ayuda",
+                        contexto.usuario.nombre,
+                        [str(p["pregunta"]) for p in visibles],
+                    ),
+                    origen="portal",
+                )
+            oficial = next((p for p in oficiales if p.get("id") == resultado_local.intencion), None)
+            if resultado_local.tipo == "nada" or oficial is None:
+                return RespuestaAsistente(pregunta=pregunta, respuesta=None)
+            if not puede_ver(str(oficial.get("perfil", "")), contexto.perfil):
+                return RespuestaAsistente(pregunta=pregunta, respuesta=None)
+            interpretada = str(oficial["pregunta"])
+
     try:
-        resultado = await mock.chat_ia(entrada.pregunta)
+        resultado = await mock.chat_ia(interpretada or pregunta)
     except ServicioNoDisponible:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=MSG_IA_CAIDA) from None
 
     if resultado is None:
-        return RespuestaAsistente(pregunta=entrada.pregunta, respuesta=None)
+        return RespuestaAsistente(pregunta=pregunta, respuesta=None)
 
     if not puede_ver(str(resultado.get("perfil", "")), contexto.perfil):
         log.info(
             "%s (%s) pidió una respuesta solo para administradores", contexto.usuario.usuario, contexto.perfil
         )
-        return RespuestaAsistente(pregunta=entrada.pregunta, respuesta=None)
+        return RespuestaAsistente(pregunta=pregunta, respuesta=None)
 
     plantilla: str = resultado["respuesta"]
     usadas = set(VARIABLE.findall(plantilla))
     datos = await valores(contexto, db, settings, usadas)
     texto = VARIABLE.sub(lambda m: datos.get(m.group(1), m.group(0)), plantilla)
-    return RespuestaAsistente(pregunta=entrada.pregunta, respuesta=texto)
+    return RespuestaAsistente(pregunta=pregunta, respuesta=texto, origen="ia", interpretada_como=interpretada)
