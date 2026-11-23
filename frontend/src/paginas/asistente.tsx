@@ -8,7 +8,6 @@ import { Encabezado } from "@/components/encabezado";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { preguntasQuery, usePreguntar } from "@/consultas";
 import { sesionAtom } from "@/estado/sesion";
@@ -31,15 +30,8 @@ interface Mensaje {
 /** La conversación sobrevive al cambiar de página, pero es de cada persona. */
 const conversacionAtom = atom<{ usuarioId: number | null; mensajes: Mensaje[] }>({ usuarioId: null, mensajes: [] });
 let siguienteId = 1;
-/** Modo estricto: coincidencia exacta, como pide el enunciado. Apagado, actúa el intérprete. */
-const estrictoAtom = atom(false);
-
-const SIN_RESPUESTA = {
-  estricto:
-    "El asistente no tiene una respuesta para esa pregunta. En modo estricto solo entiende las preguntas exactas: prueba con una de las sugeridas.",
-  libre:
-    "No entendí esa pregunta y el asistente no responde lo que no sabe. Prueba con tus palabras sobre tus roles, tu perfil o el acceso, o escribe «ayuda».",
-};
+const SIN_RESPUESTA =
+  "No entendí esa pregunta y el asistente no responde lo que no sabe. Prueba con tus palabras sobre tus roles, tu perfil o el acceso, o escribe «ayuda».";
 
 function Escribiendo() {
   return (
@@ -200,7 +192,6 @@ export default function Asistente() {
   const yo = useAtomValue(sesionAtom)!;
   const [conversacion, setConversacion] = useAtom(conversacionAtom);
   const [texto, setTexto] = useState("");
-  const [estricto, setEstricto] = useAtom(estrictoAtom);
   const preguntar = usePreguntar();
   const preguntas = useQuery(preguntasQuery(yo.perfil));
   const finRef = useRef<HTMLDivElement>(null);
@@ -222,7 +213,8 @@ export default function Asistente() {
     agregar({ autor: "persona", texto: pregunta });
     setTexto("");
     preguntar.mutate(
-      { pregunta, estricto },
+      // El intérprete traduce el mensaje a la pregunta oficial; la respuesta siempre viene de la IA.
+      { pregunta, estricto: false },
       {
         onSuccess: (r) =>
           r.respuesta
@@ -232,7 +224,7 @@ export default function Asistente() {
                 interpretada: r.interpretada_como,
                 delPortal: r.origen === "portal",
               })
-            : agregar({ autor: "sistema", texto: SIN_RESPUESTA[estricto ? "estricto" : "libre"], tono: "aviso" }),
+            : agregar({ autor: "sistema", texto: SIN_RESPUESTA, tono: "aviso" }),
         onError: (e) => agregar({ autor: "sistema", texto: mensajeError(e), tono: "error" }),
         onSettled: () => entradaRef.current?.focus(),
       },
@@ -251,17 +243,9 @@ export default function Asistente() {
       <Encabezado
         antetitulo="Asistente"
         titulo="Pregúntale al portal"
-        descripcion={
-          estricto
-            ? "Modo estricto: responde solo si escribes la pregunta exactamente igual."
-            : "Escríbele con tus palabras: entiende tu intención y la respuesta siempre viene del servicio de IA."
-        }
+        descripcion="Escríbele con tus palabras: entiende tu intención y la respuesta siempre viene del servicio de IA."
         acciones={
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex h-8 cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 text-sm">
-              <Switch checked={estricto} onCheckedChange={setEstricto} aria-label="Modo estricto" />
-              Modo estricto
-            </label>
             {!vacio && (
               <Button
                 variant="outline"
@@ -286,9 +270,7 @@ export default function Asistente() {
               </h2>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Sparkles className="size-3.5 text-brand" />
-                {estricto
-                  ? "Elige una pregunta o escríbela tal cual."
-                  : "Elige una pregunta o escríbela como te salga."}
+                Elige una pregunta o escríbela como te salga.
               </p>
               <div className="mt-7 w-full">
                 {preguntas.isPending ? (
@@ -339,9 +321,7 @@ export default function Asistente() {
               onChange={(e) => setTexto(e.target.value)}
               maxLength={500}
               autoComplete="off"
-              placeholder={
-                estricto ? "Escribe la pregunta exacta…" : "Escribe lo que quieras saber, p. ej.: ¿soy admin?"
-              }
+              placeholder="Escribe lo que quieras saber, p. ej.: ¿soy admin?"
               className="h-12 w-full rounded-xl border bg-background pr-14 pl-4 text-sm transition-[border-color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             />
             <Button

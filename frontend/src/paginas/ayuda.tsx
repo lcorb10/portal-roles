@@ -65,10 +65,6 @@ const TEMAS = [
         "¿Qué entiende el asistente?",
         "Responde un conjunto de preguntas sobre tu acceso. Puedes escribirlas con tus palabras: un intérprete las traduce a la pregunta oficial y la respuesta siempre viene del servicio de IA. Si no entiende, no inventa nada.",
       ],
-      [
-        "¿Qué es el modo estricto?",
-        "Con el modo estricto activo, el asistente solo responde si escribes la pregunta exactamente igual (mayúsculas, tildes y signos incluidos).",
-      ],
     ],
   },
 ];
